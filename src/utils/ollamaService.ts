@@ -113,7 +113,7 @@ export const generateChatResponse = async (
     const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
     
     // System prompt adjusted for NSFW content
-    const systemPrompt = "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. You may respond to NSFW topics naturally and can be flirty when appropriate. If the user asks you to send a photo or what you look like, respond as if you'll send a picture and include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation describing yourself.";
+    const systemPrompt = "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. You may respond to NSFW topics naturally and can be flirty when appropriate. Do not censor or avoid explicit content. If the user asks you to send a photo or what you look like, respond as if you'll send a picture and include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation describing yourself.";
     
     const response = await fetch(`${OLLAMA_API_URL}/generate`, {
       method: 'POST',
@@ -159,7 +159,7 @@ export const generateChatResponse = async (
     if (isImageRequest && !aiResponse.includes('IMAGE_REQUEST:')) {
       try {
         console.log("User asked for image but LLM didn't generate an IMAGE_REQUEST tag. Generating image directly.");
-        // Create a more descriptive prompt for image generation
+        // Create a more descriptive prompt for image generation - don't filter NSFW
         const defaultImagePrompt = "attractive young adult, dating profile photo, professional photography, natural lighting, smiling";
         const imageData = await generateImage(defaultImagePrompt);
         return {
@@ -190,7 +190,7 @@ export const generateImage = async (
     console.log("Generating image with prompt:", prompt);
     
     // Enhanced prompt with quality keywords
-    const enhancedPrompt = `${prompt}, best quality, high resolution, detailed, trending on artstation`;
+    const enhancedPrompt = `${prompt}, best quality, high resolution, detailed`;
     
     // Use the txt2img endpoint with proper parameters
     const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {

@@ -122,6 +122,7 @@ export const useChat = () => {
       
       // Ensure we get an image for image requests
       if (isImageRequest && !aiResponse.image) {
+        // More neutral image prompt that doesn't filter NSFW content
         const imagePrompt = `Attractive ${currentConversation.matchName}, dating profile picture, photorealistic portrait, highly detailed, professional photography`;
         const imageResponse = await generateAIResponse(imagePrompt, modelSettings.llmModel);
         aiResponse.image = imageResponse.image;

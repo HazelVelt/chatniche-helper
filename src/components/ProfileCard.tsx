@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Heart, X, MessageSquare, Eye } from 'lucide-react';
 import Button from './Button';
@@ -126,116 +127,112 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   
   return (
     <>
-      <div 
-        ref={cardRef}
-        className="relative w-full max-w-sm aspect-[3/4] overflow-hidden rounded-2xl bg-white card-shadow transition-transform duration-300"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseStart}
-        onClick={() => setDetailsExpanded(!detailsExpanded)}
-      >
-        {/* Swipe indicators */}
-        {swipeDirection === 'right' && (
-          <div className="absolute top-6 left-6 z-20 bg-green-500 text-white px-4 py-2 rounded-full font-semibold rotate-[-20deg] scale-110 animate-pulse-subtle">
-            Like
-          </div>
-        )}
-        {swipeDirection === 'left' && (
-          <div className="absolute top-6 right-6 z-20 bg-red-500 text-white px-4 py-2 rounded-full font-semibold rotate-[20deg] scale-110 animate-pulse-subtle">
-            Pass
-          </div>
-        )}
-        
-        {/* Profile image */}
-        <div className="absolute inset-0 w-full h-full">
-          <img 
-            src={profile.imageUrl} 
-            alt={profile.name} 
-            className="w-full h-full object-cover"
-            draggable="false"
-          />
-        </div>
-        
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-        
-        {/* Profile info */}
-        <div className={cn(
-          "absolute bottom-0 left-0 right-0 p-5 text-white transition-all duration-300",
-          detailsExpanded ? "bg-black/60 h-3/5" : "bg-transparent"
-        )}>
-          <div className="flex justify-between items-end mb-2">
-            <div>
-              <h3 className="text-2xl font-bold">{profile.name}, {profile.age}</h3>
-              <p className="text-white/80 text-sm">{profile.location}</p>
-            </div>
-            
-            <div className="flex gap-2">
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowFullProfile(true);
-                }}
-                className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors"
-                aria-label="View full profile"
-              >
-                <Eye size={20} className="text-white" />
-              </button>
-              
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMessage(profile.id);
-                }}
-                className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors"
-              >
-                <MessageSquare size={20} className="text-white" />
-              </button>
-            </div>
-          </div>
-          
-          {detailsExpanded && (
-            <div className="animate-slide-up mt-3">
-              <p className="text-white/90 mb-4 line-clamp-3">{profile.bio}</p>
-              
-              <div className="mb-4">
-                <h4 className="text-sm text-white/70 mb-2">Interests</h4>
-                <div className="flex flex-wrap gap-2">
-                  {profile.interests.map((interest, index) => (
-                    <span 
-                      key={index}
-                      className="bg-white/20 backdrop-blur-sm text-white text-xs py-1 px-2 rounded-full"
-                    >
-                      {interest}
-                    </span>
-                  ))}
-                </div>
-              </div>
+      <div className="flex flex-col items-center space-y-4">
+        <div 
+          ref={cardRef}
+          className="relative w-full max-w-sm aspect-[3/4] overflow-hidden rounded-2xl bg-white card-shadow transition-transform duration-300"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseStart}
+          onClick={() => setDetailsExpanded(!detailsExpanded)}
+        >
+          {/* Swipe indicators */}
+          {swipeDirection === 'right' && (
+            <div className="absolute top-6 left-6 z-20 bg-green-500 text-white px-4 py-2 rounded-full font-semibold rotate-[-20deg] scale-110 animate-pulse-subtle">
+              Like
             </div>
           )}
+          {swipeDirection === 'left' && (
+            <div className="absolute top-6 right-6 z-20 bg-red-500 text-white px-4 py-2 rounded-full font-semibold rotate-[20deg] scale-110 animate-pulse-subtle">
+              Pass
+            </div>
+          )}
+          
+          {/* Profile image */}
+          <div className="absolute inset-0 w-full h-full">
+            <img 
+              src={profile.imageUrl} 
+              alt={profile.name} 
+              className="w-full h-full object-cover"
+              draggable="false"
+            />
+          </div>
+          
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+          
+          {/* Profile info */}
+          <div className={cn(
+            "absolute bottom-0 left-0 right-0 p-5 text-white transition-all duration-300",
+            detailsExpanded ? "bg-black/60 h-3/5" : "bg-transparent"
+          )}>
+            <div className="flex justify-between items-end mb-2">
+              <div>
+                <h3 className="text-2xl font-bold">{profile.name}, {profile.age}</h3>
+                <p className="text-white/80 text-sm">{profile.location}</p>
+              </div>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowFullProfile(true);
+                  }}
+                  className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors"
+                  aria-label="View full profile"
+                >
+                  <Eye size={20} className="text-white" />
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMessage(profile.id);
+                  }}
+                  className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-colors"
+                >
+                  <MessageSquare size={20} className="text-white" />
+                </button>
+              </div>
+            </div>
+            
+            {detailsExpanded && (
+              <div className="animate-slide-up mt-3">
+                <p className="text-white/90 mb-4 line-clamp-3">{profile.bio}</p>
+                
+                <div className="mb-4">
+                  <h4 className="text-sm text-white/70 mb-2">Interests</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.interests.map((interest, index) => (
+                      <span 
+                        key={index}
+                        className="bg-white/20 backdrop-blur-sm text-white text-xs py-1 px-2 rounded-full"
+                      >
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         
-        {/* Action buttons */}
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-4 px-5 z-10 pointer-events-none">
+        {/* Action buttons - moved below the card */}
+        <div className="flex justify-center space-x-6">
           <Button
             variant="outline"
-            className="bg-white/90 text-red-500 hover:bg-white rounded-full p-3 pointer-events-auto"
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePass();
-            }}
+            className="bg-white/90 text-red-500 hover:bg-white rounded-full p-3"
+            onClick={handlePass}
           >
             <X size={24} strokeWidth={2.5} />
           </Button>
           
           <Button
             variant="outline"
-            className="bg-white/90 text-green-500 hover:bg-white rounded-full p-3 pointer-events-auto"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLike();
-            }}
+            className="bg-white/90 text-green-500 hover:bg-white rounded-full p-3"
+            onClick={handleLike}
           >
             <Heart size={24} strokeWidth={2.5} />
           </Button>
