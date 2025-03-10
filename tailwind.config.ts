@@ -99,6 +99,11 @@ export default {
 				'scale': {
 					'0%': { transform: 'scale(0.95)' },
 					'100%': { transform: 'scale(1)' }
+				},
+				'float': {
+					'0%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-20px)' },
+					'100%': { transform: 'translateY(0px)' }
 				}
 			},
 			animation: {
@@ -112,6 +117,7 @@ export default {
 				'fade-out': 'fade-out 0.3s ease-out',
 				'pulse-subtle': 'pulse-subtle 3s ease-in-out infinite',
 				'scale': 'scale 0.3s ease-out',
+				'float': 'float 6s ease-in-out infinite',
 			}
 		}
 	},

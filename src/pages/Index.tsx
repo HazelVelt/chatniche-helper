@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageSquare, Sparkles, ArrowRight, Users } from 'lucide-react';
+import { Heart, MessageSquare, Sparkles, ArrowRight, Users, Zap, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -56,21 +56,26 @@ const Index = () => {
   
   return (
     <div className="min-h-screen overflow-hidden">
+      {/* Texture overlay */}
+      <div className="texture-overlay"></div>
+      
       {/* Decorative elements */}
-      <div className="noise-bg"></div>
-      <div className="blob-shape bg-primary/30 w-[400px] h-[400px] rounded-full -left-20 -top-20"></div>
-      <div className="blob-shape bg-blue-400/20 w-[600px] h-[600px] rounded-full right-[10%] top-[20%]"></div>
-      <div className="blob-shape bg-purple-400/20 w-[500px] h-[500px] rounded-full left-[20%] top-[40%]"></div>
+      <div className="blob-shape bg-primary/30 w-[400px] h-[400px] rounded-full -left-20 -top-20 float-animation"></div>
+      <div className="blob-shape bg-blue-400/20 w-[600px] h-[600px] rounded-full right-[10%] top-[20%] float-animation-delay-2"></div>
+      <div className="blob-shape bg-purple-400/20 w-[500px] h-[500px] rounded-full left-[20%] top-[40%] float-animation-delay-4"></div>
       
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-20">
         <div className="container mx-auto text-center z-10 mt-[-80px] md:mt-0 max-w-5xl">
+          <div className="mb-6 inline-block">
+            <span className="bg-primary/10 text-primary rounded-full px-4 py-1 text-sm font-medium handdrawn-border">
+              Meet Your AI Companion
+            </span>
+          </div>
+          
           <h1 className="parallax-element text-5xl md:text-6xl lg:text-7xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary to-primary/70 animate-slide-up">
-            Find Your Perfect <span className="relative inline-block">
+            Find Your Perfect <span className="handdrawn-underline">
               AI Match
-              <svg className="absolute -bottom-2 left-0 w-full h-3 text-primary/40" viewBox="0 0 100 8" preserveAspectRatio="none">
-                <path d="M0,5 C25,2 75,2 100,5 L100,8 L0,8 Z" fill="currentColor" />
-              </svg>
             </span>
           </h1>
           
@@ -83,7 +88,7 @@ const Index = () => {
             <Button
               size="lg"
               onClick={() => navigate('/discover')}
-              className="w-full sm:w-auto group relative overflow-hidden glow-effect"
+              className="w-full sm:w-auto group relative overflow-hidden handdrawn-border"
             >
               <span className="relative z-10 flex items-center">
                 Start Discovering
@@ -96,7 +101,7 @@ const Index = () => {
               variant="outline"
               size="lg"
               onClick={scrollToFeatures}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto handdrawn-border"
             >
               Learn More
             </Button>
@@ -111,11 +116,11 @@ const Index = () => {
                   className={cn(
                     "rounded-xl overflow-hidden relative group transition-all duration-500 transform",
                     i === 2 ? "col-span-2 row-span-2" : "",
-                    "hover:scale-[1.02] hover:shadow-xl"
+                    "hover:scale-[1.02] hover:shadow-xl handdrawn-box"
                   )}
                   style={{ 
                     animationDelay: `${i * 0.1}s`,
-                    transform: `translateY(${i % 2 === 0 ? '5px' : '0px'})`,
+                    transform: `translateY(${i % 2 === 0 ? '5px' : '0px'}) rotate(${i % 2 === 0 ? '0.5deg' : '-0.5deg'})`,
                     transition: 'all 0.5s ease-out'
                   }}
                 >
@@ -134,13 +139,13 @@ const Index = () => {
             </div>
             
             {/* Decorative elements */}
-            <div className="absolute -top-10 -right-10 w-20 h-20 text-primary/20 dark:text-primary/10">
+            <div className="absolute -top-10 -right-10 w-20 h-20 text-primary/20 dark:text-primary/10 animate-pulse">
               <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M10,50 C10,30 30,10 50,10 C70,10 90,30 90,50 C90,70 70,90 50,90 C30,90 10,70 10,50 Z" 
                   stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeDasharray="10 10" />
               </svg>
             </div>
-            <div className="absolute -bottom-8 -left-8 w-16 h-16 text-primary/20 dark:text-primary/10">
+            <div className="absolute -bottom-8 -left-8 w-16 h-16 text-primary/20 dark:text-primary/10 animate-pulse animation-delay-200">
               <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="10" y="10" width="80" height="80" stroke="currentColor" strokeWidth="4" 
                   strokeLinecap="round" strokeDasharray="10 10" />
@@ -156,15 +161,18 @@ const Index = () => {
         </div>
       </section>
       
+      {/* Wave divider */}
+      <div className="wave-divider w-full"></div>
+      
       {/* Features Section */}
       <section ref={featuresRef} className="py-20 px-4 relative">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <div className="inline-block">
-              <span className="bg-primary/10 text-primary rounded-full px-4 py-1 text-sm font-medium mb-4 inline-block">How It Works</span>
+              <span className="bg-primary/10 text-primary rounded-full px-4 py-1 text-sm font-medium mb-4 inline-block handdrawn-border">How It Works</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">A New Way to Connect</h2>
-            <p className="text-foreground/70 max-w-2xl mx-auto">Discover how AI Match creates meaningful connections by leveraging the power of local machine learning.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 handdrawn-underline inline-block">A New Way to Connect</h2>
+            <p className="text-foreground/70 max-w-2xl mx-auto mt-4">Discover how AI Match creates meaningful connections by leveraging the power of local machine learning.</p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -172,10 +180,13 @@ const Index = () => {
               <div 
                 key={i} 
                 className={cn(
-                  "bg-background rounded-2xl p-8 transition-all duration-500 border border-border card-shadow hover:shadow-lg",
+                  "bg-background rounded-2xl p-8 transition-all duration-500 border border-border handdrawn-box card-shadow hover:shadow-lg",
                   "animate-slide-up"
                 )}
-                style={{ animationDelay: `${i * 100}ms` }}
+                style={{ 
+                  animationDelay: `${i * 100}ms`,
+                  transform: `rotate(${Math.random() * 0.5 - 0.25}deg)`
+                }}
               >
                 <div className="bg-primary/10 rounded-xl p-3 w-fit mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
@@ -187,41 +198,57 @@ const Index = () => {
       </section>
       
       {/* How it works Section */}
-      <section className="py-20 px-4 bg-secondary/30 dark:bg-secondary/10">
-        <div className="container mx-auto">
+      <section className="py-20 px-4 bg-secondary/30 dark:bg-secondary/10 relative">
+        <div className="blob-shape bg-primary/10 w-[300px] h-[300px] rounded-full left-[5%] top-[10%]"></div>
+        <div className="blob-shape bg-blue-400/10 w-[350px] h-[350px] rounded-full right-[5%] bottom-[10%]"></div>
+        
+        <div className="container mx-auto relative z-10">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
-              <span className="bg-primary/10 text-primary rounded-full px-4 py-1 text-sm font-medium mb-4 inline-block">The Process</span>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Built With Privacy In Mind</h2>
-              <p className="text-foreground/70 max-w-2xl mx-auto">AI Match runs completely on your device, keeping your data private and secure.</p>
+              <span className="bg-primary/10 text-primary rounded-full px-4 py-1 text-sm font-medium mb-4 inline-block handdrawn-border">The Process</span>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 handdrawn-underline inline-block">Built With Privacy In Mind</h2>
+              <p className="text-foreground/70 max-w-2xl mx-auto mt-4">AI Match runs completely on your device, keeping your data private and secure.</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-8 relative">
               {/* Connecting line between steps */}
-              <div className="hidden md:block absolute top-1/4 left-0 right-0 h-0.5 bg-border z-0"></div>
+              <div className="hidden md:block absolute top-1/4 left-0 right-0 h-0.5 bg-border z-0" style={{
+                backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='2' viewBox='0 0 6 2' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,1 L6,1' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round' stroke-dasharray='1 3'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "repeat-x",
+                height: "2px"
+              }}></div>
               
               {[
                 {
                   step: "01",
                   title: "Create Profile",
-                  description: "Set up your preferences and let our AI understand what you're looking for"
+                  description: "Set up your preferences and let our AI understand what you're looking for",
+                  icon: <Palette className="h-6 w-6 text-primary" />
                 },
                 {
                   step: "02",
                   title: "Discover Matches",
-                  description: "Browse through AI-generated profiles tailored to your preferences"
+                  description: "Browse through AI-generated profiles tailored to your preferences",
+                  icon: <Sparkles className="h-6 w-6 text-primary" />
                 },
                 {
                   step: "03",
                   title: "Connect & Chat",
-                  description: "Start conversations with your matches and get to know them better"
+                  description: "Start conversations with your matches and get to know them better",
+                  icon: <Zap className="h-6 w-6 text-primary" />
                 }
               ].map((item, i) => (
                 <div 
                   key={i} 
-                  className="relative z-10 bg-background rounded-xl p-8 border border-border card-shadow"
+                  className="relative z-10 bg-background rounded-xl p-8 border border-border card-shadow handdrawn-box"
+                  style={{ transform: `rotate(${Math.random() * 0.6 - 0.3}deg)` }}
                 >
-                  <div className="text-4xl font-bold text-primary/20 mb-4">{item.step}</div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      {item.icon}
+                    </div>
+                    <div className="text-4xl font-bold text-primary/20">{item.step}</div>
+                  </div>
                   <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
                   <p className="text-muted-foreground">{item.description}</p>
                 </div>
@@ -231,19 +258,22 @@ const Index = () => {
         </div>
       </section>
       
+      {/* Wave divider */}
+      <div className="wave-divider w-full transform rotate-180"></div>
+      
       {/* Call to Action */}
       <section className="py-20 px-4 relative">
         <div className="container mx-auto text-center relative z-10">
-          <div className="max-w-2xl mx-auto bg-background rounded-3xl p-10 border border-border card-shadow glow-effect">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to meet your AI match?</h2>
-            <p className="text-lg text-muted-foreground mb-10">
+          <div className="max-w-2xl mx-auto bg-background rounded-3xl p-10 border border-border card-shadow handdrawn-box">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 handdrawn-underline inline-block">Ready to meet your AI match?</h2>
+            <p className="text-lg text-muted-foreground mb-10 mt-4">
               Join thousands of users who are already experiencing the future of dating with AI Match.
             </p>
             
             <Button
               size="lg"
               onClick={() => navigate('/discover')}
-              className="group"
+              className="group handdrawn-border"
             >
               <span className="flex items-center">
                 Get Started Now
@@ -266,9 +296,9 @@ const Index = () => {
             </div>
             
             <div className="flex space-x-6">
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Terms</a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors handdrawn-underline">Privacy</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors handdrawn-underline">Terms</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors handdrawn-underline">Contact</a>
             </div>
           </div>
           
