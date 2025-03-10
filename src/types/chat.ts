@@ -22,3 +22,8 @@ export interface Match {
   age: number;
   bio: string;
 }
+
+export interface ModelSettings {
+  llmModel: string;
+  stableDiffusionModel: string;
+}

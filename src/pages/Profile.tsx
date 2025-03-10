@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, LogOut, ChevronRight, Heart, MessageSquare, Edit, Globe, Sparkles } from 'lucide-react';
+import { Settings, LogOut, ChevronRight, Heart, MessageSquare, Edit, Globe, Sparkles, Cpu } from 'lucide-react';
 import { toast } from 'sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import ProfileForm from '@/components/ProfileForm';
 import ProfileSetup from '@/components/ProfileSetup';
 import DatingPreferences from '@/components/DatingPreferences';
+import ModelSettings from '@/components/ModelSettings';
 import { cn } from '@/lib/utils';
 
 const Profile = () => {
-  const [activeSection, setActiveSection] = useState<'profile' | 'preferences' | null>(null);
+  const [activeSection, setActiveSection] = useState<'profile' | 'preferences' | 'models' | null>(null);
   const [profileCreated, setProfileCreated] = useState(false);
   
   const [userProfile, setUserProfile] = useState(() => {
@@ -45,7 +45,6 @@ const Profile = () => {
   });
   
   useEffect(() => {
-    // Only save to localStorage if the profile has been created
     if (profileCreated) {
       localStorage.setItem('userProfile', JSON.stringify(userProfile));
     }
@@ -83,9 +82,7 @@ const Profile = () => {
     // Logout logic would go here
   };
   
-  // Renders the content based on active section or profile creation state
   const renderContent = () => {
-    // If profile hasn't been created yet, show the profile setup
     if (!profileCreated) {
       return (
         <div className="animate-fade-in">
@@ -127,12 +124,22 @@ const Profile = () => {
       );
     }
     
+    if (activeSection === 'models') {
+      return (
+        <div className="animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6">AI Model Settings</h2>
+          <ModelSettings 
+            onSave={() => setActiveSection(null)}
+            onCancel={() => setActiveSection(null)}
+          />
+        </div>
+      );
+    }
+    
     return (
       <>
-        {/* Profile Card */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden card-shadow mb-6 animate-fade-in dark:border-border/30 relative">
           <div className="relative">
-            {/* Background pattern */}
             <div className="absolute inset-0 bg-primary/5 dark:bg-primary/10">
               <svg className="w-full h-full opacity-10" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <pattern id="pattern-circles" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse">
@@ -213,7 +220,6 @@ const Profile = () => {
           </div>
         </div>
         
-        {/* Settings Menu */}
         <div className="bg-card border border-border rounded-2xl card-shadow animate-fade-in dark:border-border/30" style={{ animationDelay: '100ms' }}>
           <div className="p-5">
             <h3 className="font-medium mb-4 flex items-center">
@@ -228,18 +234,29 @@ const Profile = () => {
                 subtitle="Age range, distance, interests"
                 onClick={() => setActiveSection('preferences')}
               />
+              
+              <MenuItem 
+                icon={<Cpu size={18} className="text-orange-500" />} 
+                title="AI Models" 
+                subtitle="LLM and Stable Diffusion settings"
+                onClick={() => setActiveSection('models')}
+                dataAttr="ai-models"
+              />
+              
               <MenuItem 
                 icon={<MessageSquare size={18} className="text-blue-500" />} 
                 title="Notifications" 
                 subtitle="Messages, matches, app updates"
                 onClick={() => toast.info('Notification settings coming soon!')}
               />
+              
               <MenuItem 
                 icon={<Settings size={18} className="text-purple-500" />} 
                 title="Privacy & Security" 
                 subtitle="Data, permissions, account"
                 onClick={() => toast.info('Privacy settings coming soon!')}
               />
+              
               <div className="flex items-center justify-between p-3 bg-secondary/40 dark:bg-secondary/20 rounded-xl">
                 <div className="flex items-center">
                   <span className="text-muted-foreground mr-3">
@@ -282,19 +299,16 @@ const Profile = () => {
   
   return (
     <div className="min-h-screen pt-16 pb-20 md:pb-8 px-4">
-      {/* Decorative elements */}
       <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-primary/5 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-secondary/10 rounded-full blur-3xl opacity-40 pointer-events-none"></div>
       
       <div className="container max-w-lg mx-auto relative z-10">
-        {/* Header */}
         {profileCreated && !activeSection && (
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Profile</h1>
           </div>
         )}
         
-        {/* Back button when in edit mode */}
         {profileCreated && activeSection && (
           <button
             onClick={() => setActiveSection(null)}
@@ -305,7 +319,6 @@ const Profile = () => {
           </button>
         )}
         
-        {/* Content */}
         {renderContent()}
       </div>
     </div>
@@ -318,12 +331,14 @@ interface MenuItemProps {
   subtitle?: string;
   rightElement?: React.ReactNode;
   onClick: () => void;
+  dataAttr?: string;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ icon, title, subtitle, rightElement, onClick }) => (
+const MenuItem: React.FC<MenuItemProps> = ({ icon, title, subtitle, rightElement, onClick, dataAttr }) => (
   <button 
     className="w-full flex items-center justify-between p-3 hover:bg-secondary/50 dark:hover:bg-secondary/20 rounded-xl transition-colors text-left"
     onClick={onClick}
+    {...(dataAttr ? { [`data-settings`]: dataAttr } : {})}
   >
     <div className="flex items-center">
       <span className="mr-3">{icon}</span>

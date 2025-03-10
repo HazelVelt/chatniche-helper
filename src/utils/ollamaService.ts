@@ -14,6 +14,10 @@ export const checkOllamaStatus = async (): Promise<{
   llmAvailable: boolean;
   llmModel: string;
   stableDiffusionAvailable: boolean;
+  availableModels: {
+    llm: string[];
+    stableDiffusion: string[];
+  };
   error?: string;
 }> => {
   try {
@@ -28,6 +32,7 @@ export const checkOllamaStatus = async (): Promise<{
         llmAvailable: false,
         llmModel: '',
         stableDiffusionAvailable: false,
+        availableModels: { llm: [], stableDiffusion: [] },
         error: 'Ollama service is not running'
       };
     }
@@ -36,24 +41,36 @@ export const checkOllamaStatus = async (): Promise<{
     const models = data.models || [];
     
     // Look for LLM and stable diffusion models
-    const llmModel = models.find((model: any) => 
+    const llmModels = models.filter((model: any) => 
       model.name.includes('llama') || 
       model.name.includes('mixtral') || 
       model.name.includes('mistral')
     );
     
-    const stableDiffusionModel = models.find((model: any) => 
+    const stableDiffusionModels = models.filter((model: any) => 
       model.name.includes('stable-diffusion') || 
-      model.name.includes('sd')
+      model.name.includes('sd') ||
+      model.name.includes('forge')
     );
+    
+    const llmModel = llmModels.length > 0 ? llmModels[0].name : '';
+    const stableDiffusionAvailable = stableDiffusionModels.length > 0;
+    
+    // Extract model names for UI selection
+    const availableLlmModels = llmModels.map((model: any) => model.name);
+    const availableSdModels = stableDiffusionModels.map((model: any) => model.name);
     
     return {
       isRunning: true,
-      llmAvailable: !!llmModel,
-      llmModel: llmModel?.name || '',
-      stableDiffusionAvailable: !!stableDiffusionModel,
-      error: !llmModel || !stableDiffusionModel ? 
-        `Required models missing: ${!llmModel ? 'LLM' : ''}${(!llmModel && !stableDiffusionModel) ? ', ' : ''}${!stableDiffusionModel ? 'Stable Diffusion' : ''}` : 
+      llmAvailable: llmModels.length > 0,
+      llmModel,
+      stableDiffusionAvailable,
+      availableModels: {
+        llm: availableLlmModels,
+        stableDiffusion: availableSdModels
+      },
+      error: (!llmModels.length || !stableDiffusionModels.length) ? 
+        `Required models missing: ${!llmModels.length ? 'LLM' : ''}${(!llmModels.length && !stableDiffusionModels.length) ? ', ' : ''}${!stableDiffusionModels.length ? 'Stable Diffusion' : ''}` : 
         undefined
     };
   } catch (error) {
@@ -62,6 +79,7 @@ export const checkOllamaStatus = async (): Promise<{
       llmAvailable: false,
       llmModel: '',
       stableDiffusionAvailable: false,
+      availableModels: { llm: [], stableDiffusion: [] },
       error: 'Failed to connect to Ollama service'
     };
   }

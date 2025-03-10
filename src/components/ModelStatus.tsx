@@ -1,21 +1,33 @@
 
 import React, { useState, useEffect } from 'react';
 import { checkOllamaStatus } from '@/utils/ollamaService';
-import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useSettings } from '@/contexts/SettingsContext';
+import { AlertTriangle, CheckCircle, XCircle, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const ModelStatus: React.FC = () => {
+  const { modelSettings, availableModels, setAvailableModels } = useSettings();
+  const navigate = useNavigate();
   const [status, setStatus] = useState<{
     isRunning: boolean;
     llmAvailable: boolean;
     llmModel: string;
     stableDiffusionAvailable: boolean;
+    availableModels: {
+      llm: string[];
+      stableDiffusion: string[];
+    };
     error?: string;
   }>({
     isRunning: false,
     llmAvailable: false,
     llmModel: '',
-    stableDiffusionAvailable: false
+    stableDiffusionAvailable: false,
+    availableModels: {
+      llm: [],
+      stableDiffusion: []
+    }
   });
   
   const [isChecking, setIsChecking] = useState(false);
@@ -25,6 +37,7 @@ const ModelStatus: React.FC = () => {
     try {
       const result = await checkOllamaStatus();
       setStatus(result);
+      setAvailableModels(result.availableModels);
       
       if (!result.isRunning) {
         toast.error('Ollama is not running. Please start Ollama service.');
@@ -47,6 +60,17 @@ const ModelStatus: React.FC = () => {
     const interval = setInterval(checkStatus, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+  
+  const goToSettings = () => {
+    navigate('/profile');
+    // Wait for navigation and then try to find and click the AI Models settings option
+    setTimeout(() => {
+      const settingsItem = document.querySelector('[data-settings="ai-models"]') as HTMLElement;
+      if (settingsItem) {
+        settingsItem.click();
+      }
+    }, 300);
+  };
   
   return (
     <div className="flex items-center px-4 py-2 border-t border-border">
@@ -71,7 +95,8 @@ const ModelStatus: React.FC = () => {
           {status.llmAvailable ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
-              Ready
+              <span className="hidden sm:inline">{modelSettings.llmModel}</span>
+              <span className="sm:hidden">Ready</span>
             </span>
           ) : (
             <span className="flex items-center gap-1 text-amber-500">
@@ -86,7 +111,8 @@ const ModelStatus: React.FC = () => {
           {status.stableDiffusionAvailable ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
-              Ready
+              <span className="hidden sm:inline">{modelSettings.stableDiffusionModel}</span>
+              <span className="sm:hidden">Ready</span>
             </span>
           ) : (
             <span className="flex items-center gap-1 text-amber-500">
@@ -97,13 +123,23 @@ const ModelStatus: React.FC = () => {
         </div>
       </div>
       
-      <button 
-        onClick={checkStatus}
-        disabled={isChecking}
-        className="text-xs text-primary hover:underline"
-      >
-        {isChecking ? 'Checking...' : 'Check again'}
-      </button>
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={checkStatus}
+          disabled={isChecking}
+          className="text-xs text-primary hover:underline"
+        >
+          {isChecking ? 'Checking...' : 'Check again'}
+        </button>
+        
+        <button 
+          onClick={goToSettings}
+          className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Settings2 size={14} />
+          <span className="hidden sm:inline">Change models</span>
+        </button>
+      </div>
     </div>
   );
 };

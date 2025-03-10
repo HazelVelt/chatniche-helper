@@ -1,9 +1,10 @@
+
 // This is a simulated version that checks for Ollama first, then falls back to faker if needed
 import { faker } from '@faker-js/faker';
-import { checkOllamaStatus, generateChatResponse } from './ollamaService';
+import { checkOllamaStatus, generateChatResponse, generateProfileImage } from './ollamaService';
 
 // Generate an AI profile
-export const generateAIProfile = async () => {
+export const generateAIProfile = async (modelName?: string) => {
   // Check if Ollama is available first
   const status = await checkOllamaStatus();
   
@@ -58,9 +59,26 @@ export const generateAIProfile = async () => {
   
   const bio = `${bioStart} ${bioMiddle} ${bioEnd}. ${randomExtra}`;
   
-  // Simulate image generation with placeholder images or use stable diffusion if available
-  const imageIndex = Math.floor(Math.random() * 10) + 1;
-  const imageUrl = `https://source.unsplash.com/random/600x800?portrait,${gender},${imageIndex}`;
+  // Check if Stable Diffusion is available for image generation
+  let imageUrl = '';
+  if (status.isRunning && status.stableDiffusionAvailable) {
+    try {
+      // Use the specified model or fall back to the first available SD model
+      const sdModel = modelName || status.availableModels.stableDiffusion[0] || 'sd';
+      const imageData = await generateProfileImage(`person, ${gender}, portrait, headshot`, sdModel);
+      if (imageData) {
+        imageUrl = `data:image/jpeg;base64,${imageData}`;
+      }
+    } catch (error) {
+      console.error('Error generating image with Stable Diffusion:', error);
+    }
+  }
+  
+  // If image generation failed, fall back to placeholder
+  if (!imageUrl) {
+    const imageIndex = Math.floor(Math.random() * 10) + 1;
+    imageUrl = `https://source.unsplash.com/random/600x800?portrait,${gender},${imageIndex}`;
+  }
   
   return {
     id: faker.string.uuid(),
@@ -75,13 +93,15 @@ export const generateAIProfile = async () => {
 };
 
 // Generate an AI response for chat - uses Ollama if available
-export const generateAIResponse = async (message: string) => {
+export const generateAIResponse = async (message: string, modelName?: string) => {
   // Check if Ollama is available
   try {
     const status = await checkOllamaStatus();
     
     if (status.isRunning && status.llmAvailable) {
-      return await generateChatResponse(message, status.llmModel);
+      // Use specified model or fall back to the first available LLM model
+      const model = modelName || status.llmModel || status.availableModels.llm[0];
+      return await generateChatResponse(message, model);
     }
   } catch (error) {
     console.error('Error checking Ollama status:', error);
@@ -124,10 +144,10 @@ export const generateAIResponse = async (message: string) => {
 };
 
 // Generate multiple profiles
-export const generateMultipleProfiles = async (count: number) => {
+export const generateMultipleProfiles = async (count: number, sdModel?: string) => {
   const profiles = [];
   for (let i = 0; i < count; i++) {
-    profiles.push(await generateAIProfile());
+    profiles.push(await generateAIProfile(sdModel));
   }
   return profiles;
 };
