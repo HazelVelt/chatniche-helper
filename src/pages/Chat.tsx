@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { generateChatResponse } from '@/utils/ollamaService';
@@ -374,7 +375,7 @@ const Chat = () => {
     if (!activeConversation) return null;
     
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen overflow-hidden">
         <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30">
           <div className="container max-w-lg mx-auto">
             <div className="flex items-center p-4">
@@ -412,7 +413,7 @@ const Chat = () => {
         
         <div 
           ref={messageContainerRef}
-          className="flex-1 overflow-y-auto no-scrollbar pt-20 pb-24 px-4"
+          className="flex-1 overflow-y-auto no-scrollbar pt-20 pb-24 px-4 h-[calc(100vh-128px)]"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <div className="container max-w-lg mx-auto">
@@ -474,7 +475,11 @@ const Chat = () => {
     );
   };
   
-  return activeConversation ? <ConversationView /> : <ConversationList />;
+  return (
+    <div className="overflow-hidden h-screen">
+      {activeConversation ? <ConversationView /> : <ConversationList />}
+    </div>
+  );
 };
 
 export default Chat;
