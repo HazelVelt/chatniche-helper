@@ -24,14 +24,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onDelete }) => {
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[80%] rounded-2xl px-4 py-2.5 break-words relative",
+        "max-w-[85%] rounded-2xl px-4 py-2.5 break-words relative",
         isUser 
           ? "bg-primary text-white rounded-tr-none"
-          : "bg-secondary text-foreground rounded-tl-none"
+          : "bg-secondary text-foreground rounded-tl-none dark:bg-secondary/40"
       )}>
-        <p>{message.text}</p>
+        <p className="whitespace-pre-wrap">{message.text}</p>
         <div className={cn(
-          "text-xs mt-1 flex justify-end",
+          "text-xs mt-1 flex justify-end items-center gap-1",
           isUser ? "text-white/70" : "text-muted-foreground"
         )}>
           {formatDistanceToNow(message.timestamp, { addSuffix: true })}

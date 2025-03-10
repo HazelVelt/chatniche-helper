@@ -43,6 +43,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     // Load matches from localStorage
@@ -409,6 +410,7 @@ const Chat = () => {
                 size="icon"
                 className="mr-3 rounded-full"
                 onClick={() => navigate('/chat')}
+                aria-label="Back to conversations"
               >
                 <ArrowLeft size={18} />
               </Button>
@@ -436,7 +438,11 @@ const Chat = () => {
         </div>
         
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto pt-16 pb-20 px-4">
+        <div 
+          ref={messageContainerRef}
+          className="flex-1 overflow-y-auto no-scrollbar pt-20 pb-24 px-4"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <div className="container max-w-lg mx-auto">
             <div className="py-4 space-y-4">
               {activeConversation.messages.map(message => (
@@ -451,7 +457,7 @@ const Chat = () => {
                 <div className="flex mb-3">
                   <div className={cn(
                     "bg-secondary text-foreground rounded-2xl rounded-tl-none px-4 py-3",
-                    "dark:bg-secondary/50"
+                    "dark:bg-secondary/40"
                   )}>
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />

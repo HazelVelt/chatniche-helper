@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -8,6 +8,7 @@ import ThemeToggle from './ThemeToggle';
 
 const Navigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const { theme } = useTheme();
   
