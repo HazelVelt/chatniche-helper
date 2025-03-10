@@ -1,32 +1,64 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '@/components/Button';
-import { Settings, LogOut, ChevronRight, Heart, MessageSquare, Edit } from 'lucide-react';
+import { Settings, LogOut, ChevronRight, Heart, MessageSquare, Moon, Edit } from 'lucide-react';
 import { toast } from 'sonner';
+import ThemeToggle from '@/components/ThemeToggle';
+import ProfileForm from '@/components/ProfileForm';
+import DatingPreferences from '@/components/DatingPreferences';
 
 const Profile = () => {
-  const [isEditing, setIsEditing] = useState(false);
+  const [activeSection, setActiveSection] = useState<'profile' | 'preferences' | null>(null);
   
-  const userProfile = {
-    name: 'Alex Morgan',
-    age: 28,
-    location: 'San Francisco, CA',
-    bio: 'Software engineer by day, photographer by night. Looking for someone to share adventures with.',
-    imageUrl: 'https://source.unsplash.com/random/400x400?portrait',
-    interests: ['Photography', 'Hiking', 'Coffee', 'Travel', 'Music'],
-    stats: {
-      matches: 32,
-      conversations: 14,
-      likes: 128
-    }
+  const [userProfile, setUserProfile] = useState(() => {
+    const savedProfile = localStorage.getItem('userProfile');
+    return savedProfile ? JSON.parse(savedProfile) : {
+      name: 'Alex Morgan',
+      age: 28,
+      location: 'San Francisco, CA',
+      bio: 'Software engineer by day, photographer by night. Looking for someone to share adventures with.',
+      imageUrl: 'https://source.unsplash.com/random/400x400?portrait',
+      interests: ['Photography', 'Hiking', 'Coffee', 'Travel', 'Music'],
+      stats: {
+        matches: 32,
+        conversations: 14,
+        likes: 128
+      }
+    };
+  });
+  
+  const [datingPreferences, setDatingPreferences] = useState(() => {
+    const savedPreferences = localStorage.getItem('datingPreferences');
+    return savedPreferences ? JSON.parse(savedPreferences) : {
+      interestedIn: 'Everyone',
+      ageRange: [21, 35] as [number, number],
+      distance: 25,
+      showMe: true
+    };
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('userProfile', JSON.stringify(userProfile));
+  }, [userProfile]);
+  
+  useEffect(() => {
+    localStorage.setItem('datingPreferences', JSON.stringify(datingPreferences));
+  }, [datingPreferences]);
+  
+  const handleSaveProfile = (updatedProfile: any) => {
+    setUserProfile({
+      ...userProfile,
+      ...updatedProfile
+    });
+    setActiveSection(null);
   };
   
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-    if (isEditing) {
-      // Save profile logic would go here
-      toast.success('Profile updated successfully!');
-    }
+  const handleSavePreferences = (updatedPreferences: any) => {
+    setDatingPreferences({
+      ...datingPreferences,
+      ...updatedPreferences
+    });
+    setActiveSection(null);
   };
   
   const handleLogout = () => {
@@ -34,32 +66,38 @@ const Profile = () => {
     // Logout logic would go here
   };
   
-  return (
-    <div className="min-h-screen pt-16 pb-20 md:pb-8 px-4">
-      <div className="container max-w-lg mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              className="p-2 h-9 w-9" 
-              onClick={() => toast.info('Settings coming soon!')}
-            >
-              <Settings size={18} />
-            </Button>
-            <Button 
-              variant="outline" 
-              className="p-2 h-9 w-9 text-red-500" 
-              onClick={handleLogout}
-            >
-              <LogOut size={18} />
-            </Button>
-          </div>
+  // Renders the content based on active section
+  const renderContent = () => {
+    if (activeSection === 'profile') {
+      return (
+        <div className="animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6">Edit Profile</h2>
+          <ProfileForm 
+            userProfile={userProfile}
+            onSave={handleSaveProfile}
+            onCancel={() => setActiveSection(null)}
+          />
         </div>
-        
+      );
+    }
+    
+    if (activeSection === 'preferences') {
+      return (
+        <div className="animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6">Dating Preferences</h2>
+          <DatingPreferences 
+            preferences={datingPreferences}
+            onSave={handleSavePreferences}
+            onCancel={() => setActiveSection(null)}
+          />
+        </div>
+      );
+    }
+    
+    return (
+      <>
         {/* Profile Card */}
-        <div className="bg-white border border-border rounded-2xl card-shadow mb-6 animate-fade-in">
+        <div className="bg-card border border-border rounded-2xl card-shadow mb-6 animate-fade-in">
           <div className="relative">
             <img 
               src={userProfile.imageUrl} 
@@ -69,7 +107,7 @@ const Profile = () => {
             
             <button 
               className="absolute top-3 right-3 bg-white/90 text-foreground backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors"
-              onClick={toggleEdit}
+              onClick={() => setActiveSection('profile')}
             >
               <Edit size={18} />
             </button>
@@ -83,21 +121,13 @@ const Profile = () => {
           <div className="p-4">
             <div className="mb-4">
               <h3 className="text-sm text-muted-foreground mb-1">About me</h3>
-              {isEditing ? (
-                <textarea 
-                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
-                  defaultValue={userProfile.bio}
-                  rows={3}
-                />
-              ) : (
-                <p>{userProfile.bio}</p>
-              )}
+              <p>{userProfile.bio}</p>
             </div>
             
             <div className="mb-4">
               <h3 className="text-sm text-muted-foreground mb-2">Interests</h3>
               <div className="flex flex-wrap gap-2">
-                {userProfile.interests.map((interest, index) => (
+                {userProfile.interests.map((interest: string, index: number) => (
                   <span 
                     key={index}
                     className="bg-secondary text-foreground text-sm py-1 px-3 rounded-full"
@@ -105,11 +135,6 @@ const Profile = () => {
                     {interest}
                   </span>
                 ))}
-                {isEditing && (
-                  <button className="bg-secondary text-primary text-sm py-1 px-3 rounded-full">
-                    + Add
-                  </button>
-                )}
               </div>
             </div>
             
@@ -127,17 +152,11 @@ const Profile = () => {
                 <div className="text-xs text-muted-foreground">Likes</div>
               </div>
             </div>
-            
-            {isEditing && (
-              <Button onClick={toggleEdit} className="w-full">
-                Save Changes
-              </Button>
-            )}
           </div>
         </div>
         
         {/* Settings Menu */}
-        <div className="bg-white border border-border rounded-2xl card-shadow animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="bg-card border border-border rounded-2xl card-shadow animate-fade-in" style={{ animationDelay: '100ms' }}>
           <div className="p-4">
             <h3 className="font-medium mb-2">Settings</h3>
             
@@ -145,7 +164,7 @@ const Profile = () => {
               <MenuItem 
                 icon={<Heart size={18} />} 
                 title="Dating Preferences" 
-                onClick={() => toast.info('Dating preferences coming soon!')}
+                onClick={() => setActiveSection('preferences')}
               />
               <MenuItem 
                 icon={<MessageSquare size={18} />} 
@@ -157,9 +176,53 @@ const Profile = () => {
                 title="Privacy & Security" 
                 onClick={() => toast.info('Privacy settings coming soon!')}
               />
+              <MenuItem 
+                icon={<Moon size={18} />} 
+                title="Dark Mode" 
+                rightElement={<ThemeToggle />}
+                onClick={() => {}}
+              />
             </div>
           </div>
+          
+          <div className="p-4 border-t border-border">
+            <Button 
+              variant="outline" 
+              className="w-full text-red-500 hover:bg-red-500/10"
+              onClick={handleLogout}
+            >
+              <LogOut size={18} className="mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
+      </>
+    );
+  };
+  
+  return (
+    <div className="min-h-screen pt-16 pb-20 md:pb-8 px-4">
+      <div className="container max-w-lg mx-auto">
+        {/* Header */}
+        {!activeSection && (
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">Profile</h1>
+          </div>
+        )}
+        
+        {/* Back button when in edit mode */}
+        {activeSection && (
+          <button
+            onClick={() => setActiveSection(null)}
+            className="mb-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft size={18} className="mr-1" />
+            Back to Profile
+          </button>
+        )}
+        
+        {/* Content */}
+        {renderContent()}
       </div>
     </div>
   );
@@ -169,10 +232,11 @@ interface MenuItemProps {
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
+  rightElement?: React.ReactNode;
   onClick: () => void;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ icon, title, subtitle, onClick }) => (
+const MenuItem: React.FC<MenuItemProps> = ({ icon, title, subtitle, rightElement, onClick }) => (
   <button 
     className="w-full flex items-center justify-between p-3 hover:bg-secondary rounded-xl transition-colors text-left"
     onClick={onClick}
@@ -184,8 +248,26 @@ const MenuItem: React.FC<MenuItemProps> = ({ icon, title, subtitle, onClick }) =
         {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
       </div>
     </div>
-    <ChevronRight size={18} className="text-muted-foreground" />
+    {rightElement || <ChevronRight size={18} className="text-muted-foreground" />}
   </button>
+);
+
+const ArrowLeft: React.FC<{ size: number, className?: string }> = ({ size, className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </svg>
 );
 
 export default Profile;

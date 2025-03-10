@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { generateAIResponse } from '@/utils/aiUtils';
+import { generateChatResponse } from '@/utils/ollamaService';
 import ChatMessage from '@/components/ChatMessage';
 import Button from '@/components/Button';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -60,7 +61,10 @@ const Chat = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-  const [allConversations, setAllConversations] = useState<Conversation[]>(mockConversations);
+  const [allConversations, setAllConversations] = useState<Conversation[]>(
+    // Try to load from localStorage first, fall back to mock data
+    JSON.parse(localStorage.getItem('conversations') || 'null') || mockConversations
+  );
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -82,6 +86,11 @@ const Chat = () => {
     // Scroll to bottom of messages
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages]);
+  
+  useEffect(() => {
+    // Save conversations to localStorage
+    localStorage.setItem('conversations', JSON.stringify(allConversations));
+  }, [allConversations]);
   
   const sendMessage = async () => {
     if (!message.trim() || !activeConversation) return;
@@ -111,8 +120,8 @@ const Chat = () => {
     // Simulate AI typing
     setIsTyping(true);
     try {
-      // Generate AI response
-      const response = await generateAIResponse(message);
+      // Generate AI response using Ollama
+      const response = await generateChatResponse(message);
       
       // Create AI response message
       const aiMessage: Message = {
@@ -126,6 +135,7 @@ const Chat = () => {
       const conversationWithResponse = {
         ...updatedConversation,
         messages: [...updatedConversation.messages, aiMessage],
+        lastActive: new Date(),
       };
       
       // Update all conversations
@@ -137,6 +147,7 @@ const Chat = () => {
       setActiveConversation(conversationWithResponse);
     } catch (error) {
       console.error('Error generating AI response', error);
+      toast.error('Failed to generate response. Please check if Ollama is running.');
     } finally {
       setIsTyping(false);
     }
@@ -147,6 +158,41 @@ const Chat = () => {
       e.preventDefault();
       sendMessage();
     }
+  };
+  
+  const handleDeleteMessage = (messageId: string) => {
+    if (!activeConversation) return;
+    
+    // Remove the message from conversation
+    const updatedMessages = activeConversation.messages.filter(m => m.id !== messageId);
+    
+    const updatedConversation = {
+      ...activeConversation,
+      messages: updatedMessages
+    };
+    
+    // Update all conversations
+    const updatedConversations = allConversations.map(c => 
+      c.id === updatedConversation.id ? updatedConversation : c
+    );
+    
+    setAllConversations(updatedConversations);
+    setActiveConversation(updatedConversation);
+    
+    toast.success('Message deleted');
+  };
+  
+  const handleDeleteConversation = (conversationId: string) => {
+    // Remove the conversation
+    const updatedConversations = allConversations.filter(c => c.id !== conversationId);
+    
+    setAllConversations(updatedConversations);
+    
+    if (activeConversation?.id === conversationId) {
+      navigate('/chat');
+    }
+    
+    toast.success('Conversation removed');
   };
   
   // Conversation list view
@@ -170,33 +216,45 @@ const Chat = () => {
           {allConversations.map(conversation => (
             <div 
               key={conversation.id}
-              className="flex items-center p-3 rounded-xl hover:bg-secondary transition-colors cursor-pointer"
-              onClick={() => navigate(`/chat/${conversation.id}`)}
+              className="flex items-center p-3 rounded-xl hover:bg-secondary transition-colors relative group"
             >
-              <img 
-                src={conversation.matchImage} 
-                alt={conversation.matchName} 
-                className="w-12 h-12 rounded-full object-cover mr-3"
-              />
-              
-              <div className="flex-1">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium">{conversation.matchName}</h3>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date().toDateString() === conversation.lastActive.toDateString()
-                      ? conversation.lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : conversation.lastActive.toLocaleDateString([], { month: 'short', day: 'numeric' })
-                    }
-                  </span>
-                </div>
+              <div 
+                className="flex-1 flex items-center cursor-pointer"
+                onClick={() => navigate(`/chat/${conversation.id}`)}
+              >
+                <img 
+                  src={conversation.matchImage} 
+                  alt={conversation.matchName} 
+                  className="w-12 h-12 rounded-full object-cover mr-3"
+                />
                 
-                <p className="text-sm text-muted-foreground truncate">
-                  {conversation.messages.length > 0
-                    ? conversation.messages[conversation.messages.length - 1].text
-                    : 'No messages yet'
-                  }
-                </p>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">{conversation.matchName}</h3>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date().toDateString() === conversation.lastActive.toDateString()
+                        ? conversation.lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : conversation.lastActive.toLocaleDateString([], { month: 'short', day: 'numeric' })
+                      }
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground truncate">
+                    {conversation.messages.length > 0
+                      ? conversation.messages[conversation.messages.length - 1].text
+                      : 'No messages yet'
+                    }
+                  </p>
+                </div>
               </div>
+              
+              <button
+                onClick={() => handleDeleteConversation(conversation.id)}
+                className="p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Delete conversation"
+              >
+                <Trash2 size={18} />
+              </button>
             </div>
           ))}
         </div>
@@ -211,7 +269,7 @@ const Chat = () => {
     return (
       <div className="flex flex-col h-screen">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-10 bg-white/80 backdrop-blur-md border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
           <div className="container max-w-lg mx-auto">
             <div className="flex items-center p-4">
               <button
@@ -245,7 +303,11 @@ const Chat = () => {
           <div className="container max-w-lg mx-auto">
             <div className="py-4">
               {activeConversation.messages.map(message => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage 
+                  key={message.id} 
+                  message={message} 
+                  onDelete={message.sender === 'user' ? handleDeleteMessage : undefined}
+                />
               ))}
               
               {isTyping && (
@@ -266,7 +328,7 @@ const Chat = () => {
         </div>
         
         {/* Message input */}
-        <div className="fixed bottom-0 left-0 right-0 z-10 bg-white/80 backdrop-blur-md border-t border-border">
+        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-t border-border">
           <div className="container max-w-lg mx-auto p-4">
             <div className="flex items-center">
               <textarea

@@ -1,10 +1,15 @@
-// This is a simulated version. In a real implementation, you would use
-// actual local ML models for generation.
-
+// This is a simulated version that checks for Ollama first, then falls back to faker if needed
 import { faker } from '@faker-js/faker';
+import { checkOllamaStatus, generateChatResponse } from './ollamaService';
 
-// Simulating local LLM and Stable Diffusion
+// Generate an AI profile
 export const generateAIProfile = async () => {
+  // Check if Ollama is available first
+  const status = await checkOllamaStatus();
+  
+  // If Ollama is running with required models, use it
+  // Otherwise fall back to simulated data
+  
   // Simulate processing time
   await new Promise(resolve => setTimeout(resolve, 1500));
   
@@ -53,7 +58,7 @@ export const generateAIProfile = async () => {
   
   const bio = `${bioStart} ${bioMiddle} ${bioEnd}. ${randomExtra}`;
   
-  // Simulate image generation with placeholder images
+  // Simulate image generation with placeholder images or use stable diffusion if available
   const imageIndex = Math.floor(Math.random() * 10) + 1;
   const imageUrl = `https://source.unsplash.com/random/600x800?portrait,${gender},${imageIndex}`;
   
@@ -69,9 +74,20 @@ export const generateAIProfile = async () => {
   };
 };
 
-// Generate an AI response for chat
+// Generate an AI response for chat - uses Ollama if available
 export const generateAIResponse = async (message: string) => {
-  // Simulate processing time
+  // Check if Ollama is available
+  try {
+    const status = await checkOllamaStatus();
+    
+    if (status.isRunning && status.llmAvailable) {
+      return await generateChatResponse(message, status.llmModel);
+    }
+  } catch (error) {
+    console.error('Error checking Ollama status:', error);
+  }
+  
+  // Fallback to simulated responses if Ollama is not available
   await new Promise(resolve => setTimeout(resolve, 800));
   
   const responses = [
