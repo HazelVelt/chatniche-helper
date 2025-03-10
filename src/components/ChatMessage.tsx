@@ -12,10 +12,11 @@ interface ChatMessageProps {
     timestamp: Date;
     read?: boolean;
   };
+  matchImage?: string;
   onDelete?: (id: string) => void;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, onDelete }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete }) => {
   const isUser = message.sender === 'user';
   
   return (
@@ -23,6 +24,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onDelete }) => {
       "flex mb-4 group",
       isUser ? "justify-end" : "justify-start"
     )}>
+      {!isUser && matchImage && (
+        <div className="h-8 w-8 rounded-full overflow-hidden mr-2 mt-1">
+          <img 
+            src={matchImage || '/placeholder.svg'} 
+            alt="Match" 
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+      
       <div className={cn(
         "max-w-[75%] rounded-2xl px-4 py-3 break-words relative",
         isUser 

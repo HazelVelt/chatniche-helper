@@ -61,12 +61,10 @@ const Chat = () => {
         <div className="p-4 border-b border-border/30">
           <h1 className="text-xl font-bold">Messages</h1>
         </div>
-        <div className="overflow-y-auto h-[calc(100vh-8rem)]">
-          <ConversationList 
-            conversations={conversations}
-            onCreateNew={handleCreateNewChat}
-          />
-        </div>
+        <ConversationList 
+          conversations={conversations}
+          onCreateNew={handleCreateNewChat}
+        />
       </div>
       
       {/* Chat view */}
@@ -92,16 +90,12 @@ const Chat = () => {
               </div>
             </div>
             
-            <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-80 lg:left-96 p-4 bg-background/80 backdrop-blur-md border-t border-border/30">
-              <div className="max-w-lg mx-auto">
-                <MessageInput
-                  value={messageText}
-                  onChange={setMessageText}
-                  onSend={() => sendMessage(messageText)}
-                  isLoading={isLoading}
-                />
-              </div>
-            </div>
+            <MessageInput
+              value={messageText}
+              onChange={setMessageText}
+              onSend={() => sendMessage(messageText)}
+              isLoading={isLoading}
+            />
           </>
         ) : (
           <div className="flex items-center justify-center h-full p-4">
