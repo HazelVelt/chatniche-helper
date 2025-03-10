@@ -44,6 +44,7 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   useEffect(() => {
     const savedMatches = JSON.parse(localStorage.getItem('matches') || '[]');
@@ -97,6 +98,14 @@ const Chat = () => {
     localStorage.setItem('conversations', JSON.stringify(allConversations));
   }, [allConversations]);
   
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [message]);
+  
   const sendMessage = async () => {
     if (!message.trim() || !activeConversation) return;
     
@@ -120,6 +129,11 @@ const Chat = () => {
     setAllConversations(updatedConversations);
     setActiveConversation(updatedConversation);
     setMessage('');
+    
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     
     setIsTyping(true);
     try {
@@ -222,8 +236,21 @@ const Chat = () => {
     toast.success(`Started conversation with ${match.name}`);
   };
   
+  // Typing indicator component
+  const TypingIndicator = () => (
+    <div className="flex mb-4 justify-start">
+      <div className="bg-secondary/60 text-foreground rounded-2xl rounded-tl-none px-4 py-3 dark:bg-secondary/30 shadow-sm">
+        <div className="flex space-x-2">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.2s' }} />
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.4s' }} />
+        </div>
+      </div>
+    </div>
+  );
+  
   const ConversationList = () => (
-    <div className="container max-w-lg mx-auto pt-16 pb-20 px-4">
+    <div className="container max-w-lg mx-auto pt-16 pb-20 px-4 overflow-y-auto h-full no-scrollbar">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Messages</h1>
         <Button 
@@ -258,7 +285,7 @@ const Chat = () => {
               >
                 <div className="relative">
                   <img 
-                    src={match.image} 
+                    src={match.image || '/placeholder.svg'} 
                     alt={match.name} 
                     className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow-md"
                   />
@@ -327,7 +354,7 @@ const Chat = () => {
                 >
                   <div className="relative">
                     <img 
-                      src={conversation.matchImage} 
+                      src={conversation.matchImage || '/placeholder.svg'} 
                       alt={conversation.matchName} 
                       className="w-12 h-12 rounded-full object-cover mr-3 border border-border/30"
                     />
@@ -375,14 +402,15 @@ const Chat = () => {
     if (!activeConversation) return null;
     
     return (
-      <div className="flex flex-col h-screen overflow-hidden">
-        <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30">
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30 shadow-sm">
           <div className="container max-w-lg mx-auto">
             <div className="flex items-center p-4">
               <Button
                 variant="ghost"
                 size="icon"
-                className="mr-3 rounded-full"
+                className="mr-3 rounded-full hover:bg-secondary/80"
                 onClick={() => navigate('/chat')}
                 aria-label="Back to conversations"
               >
@@ -391,14 +419,14 @@ const Chat = () => {
               
               <div className="relative">
                 <img 
-                  src={activeConversation.matchImage} 
+                  src={activeConversation.matchImage || '/placeholder.svg'} 
                   alt={activeConversation.matchName} 
                   className="w-10 h-10 rounded-full object-cover mr-3 border border-border/30"
                 />
                 <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
               </div>
               
-              <div>
+              <div className="flex-1">
                 <h2 className="font-medium">{activeConversation.matchName}</h2>
                 <p className="text-xs text-muted-foreground">
                   {new Date().toDateString() === new Date(activeConversation.lastActive).toDateString()
@@ -411,13 +439,14 @@ const Chat = () => {
           </div>
         </div>
         
+        {/* Messages area */}
         <div 
           ref={messageContainerRef}
           className="flex-1 overflow-y-auto no-scrollbar pt-20 pb-24 px-4 h-[calc(100vh-128px)]"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <div className="container max-w-lg mx-auto">
-            <div className="py-4 space-y-4">
+            <div className="py-4 space-y-0">
               {activeConversation.messages.map(message => (
                 <ChatMessage 
                   key={message.id} 
@@ -426,42 +455,34 @@ const Chat = () => {
                 />
               ))}
               
-              {isTyping && (
-                <div className="flex mb-3">
-                  <div className={cn(
-                    "bg-secondary text-foreground rounded-2xl rounded-tl-none px-4 py-3",
-                    "dark:bg-secondary/40"
-                  )}>
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
-                      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: '0.2s' }} />
-                      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: '0.4s' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
+              {isTyping && <TypingIndicator />}
               
               <div ref={messagesEndRef} />
             </div>
           </div>
         </div>
         
-        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-t border-border/30">
+        {/* Input area */}
+        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-t border-border/30 shadow-sm">
           <div className="container max-w-lg mx-auto p-4">
-            <div className="flex items-center">
-              <textarea
-                className="flex-1 bg-secondary/50 dark:bg-secondary/30 rounded-2xl py-3 px-4 outline-none resize-none max-h-[120px] border border-border/20 focus:border-primary/30 transition-colors"
-                placeholder="Type a message..."
-                rows={1}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyPress}
-              />
+            <div className="flex items-end">
+              <div className="flex-1 bg-secondary/50 dark:bg-secondary/30 rounded-2xl px-4 py-2 border border-border/20 focus-within:border-primary/30 transition-colors">
+                <textarea
+                  ref={textareaRef}
+                  className="w-full bg-transparent outline-none resize-none text-sm md:text-base"
+                  placeholder="Type a message..."
+                  rows={1}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  style={{ maxHeight: '120px', minHeight: '24px' }}
+                />
+              </div>
               
               <Button
                 variant="default"
                 size="icon"
-                className="ml-2 rounded-full h-12 w-12 bg-primary hover:bg-primary/90"
+                className="ml-2 rounded-full h-12 w-12 bg-primary hover:bg-primary/90 shadow-md"
                 disabled={!message.trim() || isTyping}
                 onClick={sendMessage}
                 aria-label="Send message"

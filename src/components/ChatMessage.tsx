@@ -20,33 +20,33 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onDelete }) => {
   
   return (
     <div className={cn(
-      "flex mb-3 group",
+      "flex mb-4 group",
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[85%] rounded-2xl px-4 py-2.5 break-words relative",
+        "max-w-[75%] rounded-2xl px-4 py-3 break-words relative",
         isUser 
-          ? "bg-primary text-white rounded-tr-none"
-          : "bg-secondary text-foreground rounded-tl-none dark:bg-secondary/40"
+          ? "bg-primary text-white rounded-tr-none shadow-sm"
+          : "bg-secondary/60 text-foreground rounded-tl-none dark:bg-secondary/30 shadow-sm"
       )}>
-        <p className="whitespace-pre-wrap">{message.text}</p>
+        <p className="whitespace-pre-wrap text-sm md:text-base">{message.text}</p>
         <div className={cn(
-          "text-xs mt-1 flex justify-end items-center gap-1",
+          "text-xs mt-1.5 flex justify-between items-center gap-1",
           isUser ? "text-white/70" : "text-muted-foreground"
         )}>
-          {formatDistanceToNow(message.timestamp, { addSuffix: true })}
+          <span>{formatDistanceToNow(message.timestamp, { addSuffix: true })}</span>
           {isUser && message.read && (
-            <span className="ml-1">• Read</span>
+            <span className="text-xs">• Read</span>
           )}
         </div>
         
         {onDelete && isUser && (
           <button 
             onClick={() => onDelete(message.id)}
-            className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1 rounded-full bg-white/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1.5 rounded-full bg-secondary/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
             aria-label="Delete message"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         )}
       </div>
