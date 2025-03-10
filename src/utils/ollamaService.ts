@@ -55,7 +55,10 @@ export const checkOllamaStatus = async (): Promise<{
     
     try {
       const sdResponse = await fetch(`${SD_WEBUI_URL}/sd-models`, {
-        method: 'GET'
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       
       if (sdResponse.ok) {
@@ -106,11 +109,11 @@ export const generateChatResponse = async (
   try {
     console.log(`Generating response with model: ${modelName}, message: ${message}`);
     
-    // Try to detect if this is an image request
-    const isImageRequest = /generate.*image|show.*picture|draw|create.*image|make.*picture|visualize/i.test(message);
+    // Detect if this is an image request
+    const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
     
-    // System prompt adjusted for NSFW content (with warning)
-    const systemPrompt = "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. You may respond to NSFW topics naturally if the user mentions them. If the user asks you to generate or create an image, include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation.";
+    // System prompt adjusted for NSFW content
+    const systemPrompt = "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. You may respond to NSFW topics naturally and can be flirty when appropriate. If the user asks you to send a photo or what you look like, respond as if you'll send a picture and include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation describing yourself.";
     
     const response = await fetch(`${OLLAMA_API_URL}/generate`, {
       method: 'POST',
@@ -139,7 +142,7 @@ export const generateChatResponse = async (
       const [text, imagePrompt] = aiResponse.split('IMAGE_REQUEST:');
       console.log("Image prompt detected:", imagePrompt.trim());
       try {
-        const imageData = await generateProfileImage(imagePrompt.trim());
+        const imageData = await generateImage(imagePrompt.trim());
         return {
           text: text.trim(),
           image: imageData
@@ -147,18 +150,18 @@ export const generateChatResponse = async (
       } catch (imageError) {
         console.error("Failed to generate image:", imageError);
         return {
-          text: text.trim() + "\n\n(I tried to generate an image but encountered an error. Please try again later.)"
+          text: text.trim() + "\n\n(I tried to send you an image but encountered an error. Let me try again later.)"
         };
       }
     }
     
-    // If it's detected as an image request but LLM didn't insert IMAGE_REQUEST tag,
-    // we'll add one directly
+    // Direct image request handling as fallback
     if (isImageRequest && !aiResponse.includes('IMAGE_REQUEST:')) {
       try {
         console.log("User asked for image but LLM didn't generate an IMAGE_REQUEST tag. Generating image directly.");
-        const imagePrompt = message.replace(/generate|create|draw|show|make|picture|image|visualize/gi, '').trim();
-        const imageData = await generateProfileImage(imagePrompt);
+        // Create a more descriptive prompt for image generation
+        const defaultImagePrompt = "attractive young adult, dating profile photo, professional photography, natural lighting, smiling";
+        const imageData = await generateImage(defaultImagePrompt);
         return {
           text: aiResponse,
           image: imageData
@@ -177,55 +180,19 @@ export const generateChatResponse = async (
 };
 
 /**
- * Generate AI profile image using Stable Diffusion WebUI
+ * Generate image using Stable Diffusion WebUI's txt2img API
  */
-export const generateProfileImage = async (
+export const generateImage = async (
   prompt: string,
-  modelName: string = ''
+  negativePrompt: string = "deformed, distorted, disfigured, poorly drawn, bad anatomy, extra limb, missing limb, floating limbs"
 ): Promise<string> => {
   try {
-    // First check if SD WebUI is available
-    const statusResponse = await fetch(`${SD_WEBUI_URL}/options`, {
-      method: 'GET'
-    });
+    console.log("Generating image with prompt:", prompt);
     
-    if (!statusResponse.ok) {
-      console.error('Stable Diffusion WebUI is not available', await statusResponse.text());
-      throw new Error('Stable Diffusion WebUI is not available');
-    }
-    
-    // If a specific model is requested, try to select it
-    if (modelName) {
-      try {
-        const modelSelectResponse = await fetch(`${SD_WEBUI_URL}/options`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            sd_model_checkpoint: modelName
-          })
-        });
-        
-        if (!modelSelectResponse.ok) {
-          console.error('Failed to select SD model:', await modelSelectResponse.text());
-        } else {
-          console.log(`Successfully selected SD model: ${modelName}`);
-        }
-      } catch (error) {
-        console.error('Error selecting SD model:', error);
-      }
-    }
-    
-    // Enhanced prompt with quality keywords but allows NSFW content
+    // Enhanced prompt with quality keywords
     const enhancedPrompt = `${prompt}, best quality, high resolution, detailed, trending on artstation`;
     
-    // Milder negative prompt that only filters major issues but allows NSFW
-    const negativePrompt = "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation";
-    
-    console.log("Generating image with prompt:", enhancedPrompt);
-    
-    // Generate the image
+    // Use the txt2img endpoint with proper parameters
     const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {
       method: 'POST',
       headers: {
@@ -238,7 +205,14 @@ export const generateProfileImage = async (
         height: 768,
         steps: 30,
         cfg_scale: 7,
-        sampler_name: "DPM++ 2M Karras"
+        sampler_name: "DPM++ 2M Karras",
+        sampler_index: "DPM++ 2M Karras",
+        batch_size: 1,
+        n_iter: 1,
+        seed: -1,
+        restore_faces: true,
+        send_images: true,
+        save_images: false
       }),
     });
     
@@ -249,11 +223,52 @@ export const generateProfileImage = async (
     
     const data = await response.json();
     console.log("Image generation successful");
-    return data.images?.[0] || '';
+    
+    if (!data.images || data.images.length === 0) {
+      throw new Error('No images returned from API');
+    }
+    
+    return data.images[0];
   } catch (error) {
-    console.error('Error generating profile image:', error);
-    throw error;
+    console.error('Error generating image:', error);
+    
+    // Fallback to Unsplash if SD WebUI fails
+    try {
+      console.log("Falling back to Unsplash for image");
+      const gender = Math.random() > 0.5 ? 'woman' : 'man';
+      const category = ['portrait', 'person', 'model', 'fashion'][Math.floor(Math.random() * 4)];
+      const response = await fetch(`https://source.unsplash.com/featured/768x1024/?${category},${gender}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch from Unsplash');
+      }
+      
+      const blob = await response.blob();
+      const reader = new FileReader();
+      
+      return new Promise((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (fallbackError) {
+      console.error('Fallback image fetch failed:', fallbackError);
+      throw error; // Throw the original error
+    }
   }
+};
+
+/**
+ * Generate AI profile image using Stable Diffusion WebUI
+ */
+export const generateProfileImage = async (
+  prompt: string,
+  modelName: string = ''
+): Promise<string> => {
+  return generateImage(prompt);
 };
 
 /**

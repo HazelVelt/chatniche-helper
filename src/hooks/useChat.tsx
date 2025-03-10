@@ -1,6 +1,7 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Conversation, Message } from '@/types/chat';
+import { Conversation, Message, Match } from '@/types/chat';
 import { generateAIResponse } from '@/utils/aiUtils';
 import { useSettings } from '@/contexts/SettingsContext';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,11 +15,12 @@ export const useChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { modelSettings } = useSettings();
 
+  // Load conversations and matches from localStorage
   useEffect(() => {
     const savedConversations = localStorage.getItem('conversations');
     const matches = JSON.parse(localStorage.getItem('matches') || '[]');
     
-    let allConversations = [];
+    let allConversations: Conversation[] = [];
     
     if (savedConversations) {
       const parsed = JSON.parse(savedConversations);
@@ -32,7 +34,8 @@ export const useChat = () => {
       }));
     }
     
-    matches.forEach((match: any) => {
+    // Add any matches that don't have conversations yet
+    matches.forEach((match: Match) => {
       if (!allConversations.some((conv: Conversation) => conv.id === match.id)) {
         allConversations.push({
           id: match.id,
@@ -47,6 +50,7 @@ export const useChat = () => {
     setConversations(allConversations);
   }, []);
 
+  // Handle route params and navigation
   useEffect(() => {
     if (id) {
       const conversation = conversations.find(conv => conv.id === id);
@@ -60,10 +64,28 @@ export const useChat = () => {
     }
   }, [id, conversations, navigate]);
 
+  // Save conversations to localStorage
   useEffect(() => {
     if (conversations.length > 0) {
       localStorage.setItem('conversations', JSON.stringify(conversations));
     }
+  }, [conversations]);
+
+  // Add a new match to conversations
+  const addMatchToConversations = useCallback((match: Match) => {
+    if (!conversations.some(conv => conv.id === match.id)) {
+      const newConversation: Conversation = {
+        id: match.id,
+        matchName: match.name,
+        matchImage: match.image,
+        lastActive: new Date(),
+        messages: []
+      };
+      
+      setConversations(prev => [...prev, newConversation]);
+      return newConversation;
+    }
+    return conversations.find(conv => conv.id === match.id);
   }, [conversations]);
 
   const sendMessage = useCallback(async (text: string) => {
@@ -93,10 +115,12 @@ export const useChat = () => {
     
     setIsLoading(true);
     try {
-      const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic/i.test(text.toLowerCase());
+      // Check if this is an image request
+      const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(text.toLowerCase());
       
       const aiResponse = await generateAIResponse(text, modelSettings.llmModel);
       
+      // Ensure we get an image for image requests
       if (isImageRequest && !aiResponse.image) {
         const imagePrompt = `Attractive ${currentConversation.matchName}, dating profile picture, photorealistic portrait, highly detailed, professional photography`;
         const imageResponse = await generateAIResponse(imagePrompt, modelSettings.llmModel);
@@ -137,6 +161,7 @@ export const useChat = () => {
     messageText,
     setMessageText,
     isLoading,
-    sendMessage
+    sendMessage,
+    addMatchToConversations
   };
 };

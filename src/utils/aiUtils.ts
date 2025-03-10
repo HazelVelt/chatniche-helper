@@ -1,6 +1,6 @@
 // This is a simulated version that checks for Ollama first, then falls back to faker if needed
 import { faker } from '@faker-js/faker';
-import { checkOllamaStatus, generateChatResponse, generateProfileImage, checkStableDiffusionStatus } from './ollamaService';
+import { checkOllamaStatus, generateChatResponse, generateImage, checkStableDiffusionStatus } from './ollamaService';
 
 // Generate an AI profile
 export const generateAIProfile = async (modelName?: string) => {
@@ -53,42 +53,103 @@ export const generateAIProfile = async (modelName?: string) => {
     bio = generateSimulatedBio(interests);
   }
   
-  // For image generation, use Unsplash with specific categories
-  const categories = ['person', 'portrait', 'fashion', 'model'];
-  const category = categories[Math.floor(Math.random() * categories.length)];
-  const genderParam = gender === 'female' ? 'woman' : 'man';
-  let imageUrl = `https://source.unsplash.com/featured/800x1000/?${category},${genderParam}`;
+  // For image generation, try using Stable Diffusion first
+  let imageUrl = "";
   
   // Check if Stable Diffusion WebUI is available for image generation
-  if (sdStatus.isRunning && sdStatus.availableModels.length > 0) {
+  if (sdStatus.isRunning) {
     try {
-      // Use the specified model or fall back to the first available SD model
-      const sdModel = modelName || (sdStatus.availableModels.length > 0 ? sdStatus.availableModels[0] : '');
-      
-      if (sdModel) {
-        const prompt = `${gender}, young adult, ${age} years old, attractive, portrait photo, highly detailed, photorealistic`;
-        console.log("Generating profile image with prompt:", prompt);
-        const imageData = await generateProfileImage(prompt, sdModel);
-        if (imageData) {
+      const prompt = `${gender}, young adult, ${age} years old, attractive, portrait photo, highly detailed, photorealistic`;
+      console.log("Generating profile image with prompt:", prompt);
+      const imageData = await generateImage(prompt);
+      if (imageData) {
+        // Check if imageData is already a data URL
+        if (imageData.startsWith('data:')) {
+          imageUrl = imageData;
+        } else {
           imageUrl = `data:image/jpeg;base64,${imageData}`;
-          console.log("Profile image generated successfully");
         }
+        console.log("Profile image generated successfully");
       }
     } catch (error) {
       console.error('Error generating image with Stable Diffusion:', error);
+      // Fall back to Unsplash
+      imageUrl = await getUnsplashImage(gender);
     }
+  } else {
+    // Fallback to Unsplash image
+    imageUrl = await getUnsplashImage(gender);
   }
   
-  return {
+  // Add this profile to matches so it appears in chat
+  const profile = {
     id: faker.string.uuid(),
     name: firstName,
     age,
     location: faker.location.city(),
     bio,
-    imageUrl,
+    image: imageUrl,
     interests,
     lastActive: faker.date.recent(),
   };
+  
+  // Save to matches in localStorage
+  saveMatchToLocalStorage(profile);
+  
+  return profile;
+};
+
+// Save a match to localStorage
+const saveMatchToLocalStorage = (match: any) => {
+  const existingMatches = JSON.parse(localStorage.getItem('matches') || '[]');
+  if (!existingMatches.some((m: any) => m.id === match.id)) {
+    existingMatches.push({
+      id: match.id,
+      name: match.name,
+      age: match.age,
+      bio: match.bio,
+      image: match.image
+    });
+    localStorage.setItem('matches', JSON.stringify(existingMatches));
+    console.log(`Added match ${match.name} to localStorage`);
+    
+    // Also ensure there's a conversation for this match
+    const conversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+    if (!conversations.some((c: any) => c.id === match.id)) {
+      conversations.push({
+        id: match.id,
+        matchName: match.name,
+        matchImage: match.image,
+        lastActive: new Date().toISOString(),
+        messages: []
+      });
+      localStorage.setItem('conversations', JSON.stringify(conversations));
+      console.log(`Created conversation for ${match.name}`);
+    }
+  }
+};
+
+// Get an image from Unsplash
+const getUnsplashImage = async (gender: string): Promise<string> => {
+  try {
+    const categories = ['person', 'portrait', 'fashion', 'model'];
+    const category = categories[Math.floor(Math.random() * categories.length)];
+    const genderParam = gender === 'female' ? 'woman' : 'man';
+    const unsplashUrl = `https://source.unsplash.com/featured/800x1000/?${category},${genderParam}`;
+    
+    const response = await fetch(unsplashUrl);
+    const blob = await response.blob();
+    
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error fetching Unsplash image:', error);
+    return 'https://source.unsplash.com/featured/800x1000/?person';
+  }
 };
 
 // Generate a simulated bio
@@ -118,7 +179,7 @@ const generateSimulatedBio = (interests: string[]) => {
 // Generate an AI response for chat - uses Ollama if available
 export const generateAIResponse = async (message: string, modelName?: string): Promise<{text: string, image?: string}> => {
   // Check if this is an image request
-  const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic/i.test(message.toLowerCase());
+  const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
   
   // Check if Ollama is available
   try {
@@ -142,24 +203,12 @@ export const generateAIResponse = async (message: string, modelName?: string): P
   
   // If it's an image request, generate both text and image
   if (isImageRequest) {
-    const categories = ['person', 'portrait', 'fashion', 'model'];
-    const category = categories[Math.floor(Math.random() * categories.length)];
-    const gender = Math.random() > 0.5 ? 'woman' : 'man';
-    const imageUrl = `https://source.unsplash.com/featured/800x1000/?${category},${gender}`;
-    
-    // Fetch the image and convert to base64
     try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
+      const imageUrl = await getUnsplashImage(Math.random() > 0.5 ? 'female' : 'male');
       
       return {
         text: "Here's a photo of me! What do you think? 😊",
-        image: base64 as string
+        image: imageUrl
       };
     } catch (error) {
       console.error('Error fetching image:', error);

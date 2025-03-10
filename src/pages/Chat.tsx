@@ -28,6 +28,35 @@ const Chat = () => {
     }
   }, [currentConversation?.messages]);
   
+  // When a message is deleted
+  const handleDeleteMessage = (messageId: string) => {
+    if (!currentConversation) return;
+    
+    const updatedMessages = currentConversation.messages.filter(
+      message => message.id !== messageId
+    );
+    
+    // Update this in localStorage directly
+    const allConversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+    const updatedConversations = allConversations.map((conv: any) => {
+      if (conv.id === currentConversation.id) {
+        return {
+          ...conv,
+          messages: updatedMessages.map(msg => ({
+            ...msg,
+            timestamp: msg.timestamp.toISOString()
+          }))
+        };
+      }
+      return conv;
+    });
+    
+    localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+    
+    // Force a reload of the page to update the state
+    window.location.reload();
+  };
+  
   const handleCreateNewChat = () => {
     // In a real app, this would fetch a new match
     // For now, we'll just navigate back to discover
@@ -84,6 +113,7 @@ const Chat = () => {
                     key={message.id}
                     message={message}
                     matchImage={currentConversation.matchImage}
+                    onDelete={message.sender === 'user' ? handleDeleteMessage : undefined}
                   />
                 ))}
                 <div ref={messagesEndRef} />

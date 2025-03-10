@@ -23,6 +23,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
   const [isTyping, setIsTyping] = useState(!isUser);
   const [typingComplete, setTypingComplete] = useState(isUser);
   const [showImage, setShowImage] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   // Simulate typing effect for AI messages
   useEffect(() => {
@@ -36,6 +37,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
     setIsTyping(true);
     setTypingComplete(false);
     setShowImage(false);
+    setImageLoaded(false);
     
     const typingInterval = setInterval(() => {
       if (i < message.text.length) {
@@ -54,13 +56,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
     return () => clearInterval(typingInterval);
   }, [message.text, isUser, message.image]);
   
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+
+  // Handle image format (base64 or URL)
+  const getImageSrc = (imageData: string) => {
+    if (imageData.startsWith('data:')) {
+      return imageData;
+    } else if (imageData.startsWith('http')) {
+      return imageData;
+    } else {
+      return `data:image/jpeg;base64,${imageData}`;
+    }
+  };
+  
   return (
     <div className={cn(
       "flex mb-4 group",
       isUser ? "justify-end" : "justify-start"
     )}>
       {!isUser && matchImage && (
-        <div className="h-8 w-8 rounded-full overflow-hidden mr-2 mt-1">
+        <div className="h-8 w-8 rounded-full overflow-hidden mr-2 mt-1 flex-shrink-0">
           <img 
             src={matchImage || '/placeholder.svg'} 
             alt="Match" 
@@ -87,13 +104,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
         
         {message.image && typingComplete && (
           <div className={cn(
-            "mt-2 rounded-lg overflow-hidden transition-all duration-300",
-            showImage ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            "mt-2 rounded-lg overflow-hidden transition-all duration-500",
+            showImage ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0",
+            imageLoaded ? "scale-100" : "scale-95"
           )}>
             <img 
-              src={message.image.startsWith('data:') ? message.image : `data:image/jpeg;base64,${message.image}`}
+              src={getImageSrc(message.image)}
               alt="Generated"
-              className="w-full h-auto max-h-[300px] object-cover rounded-lg"
+              className="w-full h-auto object-cover rounded-lg"
+              style={{ maxHeight: '300px' }}
+              onLoad={handleImageLoad}
             />
           </div>
         )}
