@@ -1,10 +1,11 @@
+
 /**
  * Utility for interacting with local Ollama models
  */
 
 // Default URL for Ollama API
 const OLLAMA_API_URL = 'http://localhost:11434/api';
-// Default URL for Stable Diffusion WebUI
+// Default URL for Stable Diffusion WebUI (Automatic1111)
 const SD_WEBUI_URL = 'http://127.0.0.1:7860/sdapi/v1';
 
 /**
@@ -41,17 +42,10 @@ export const checkOllamaStatus = async (): Promise<{
     const data = await response.json();
     const models = data.models || [];
     
-    // Look for LLM models
-    const llmModels = models.filter((model: any) => 
-      model.name.includes('llama') || 
-      model.name.includes('mixtral') || 
-      model.name.includes('mistral')
-    );
+    // Get all available LLM models
+    const llmModels = models.map((model: any) => model.name);
     
-    const llmModel = llmModels.length > 0 ? llmModels[0].name : '';
-    
-    // Extract model names for UI selection
-    const availableLlmModels = llmModels.map((model: any) => model.name);
+    const llmModel = llmModels.length > 0 ? llmModels[0] : '';
     
     // Check if SD WebUI is available
     let stableDiffusionAvailable = false;
@@ -77,7 +71,7 @@ export const checkOllamaStatus = async (): Promise<{
       llmModel,
       stableDiffusionAvailable,
       availableModels: {
-        llm: availableLlmModels,
+        llm: llmModels,
         stableDiffusion: availableSdModels
       },
       error: (!llmModels.length || !stableDiffusionAvailable) ? 
@@ -85,6 +79,7 @@ export const checkOllamaStatus = async (): Promise<{
         undefined
     };
   } catch (error) {
+    console.error('Error checking Ollama status:', error);
     return {
       isRunning: false,
       llmAvailable: false,
@@ -146,26 +141,35 @@ export const generateChatResponse = async (
  */
 export const generateProfileImage = async (
   prompt: string,
-  modelName: string = 'stable_diffusion'
+  modelName: string = 'v1-5-pruned-emaonly'
 ): Promise<string> => {
   try {
     // First check if SD WebUI is available
-    const statusResponse = await fetch(`${SD_WEBUI_URL}/options`);
+    const statusResponse = await fetch(`${SD_WEBUI_URL}/options`, {
+      method: 'GET'
+    });
     
     if (!statusResponse.ok) {
-      throw new Error('Stable Diffusion WebUI is not available');
+      console.error('Stable Diffusion WebUI is not available');
+      return '';
     }
     
-    // Select the model
-    await fetch(`${SD_WEBUI_URL}/options`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        sd_model_checkpoint: modelName
-      })
-    });
+    // Select the model if specified
+    if (modelName) {
+      try {
+        await fetch(`${SD_WEBUI_URL}/options`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sd_model_checkpoint: modelName
+          })
+        });
+      } catch (error) {
+        console.error('Error selecting SD model:', error);
+      }
+    }
     
     // Generate the image
     const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {
@@ -174,7 +178,7 @@ export const generateProfileImage = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: prompt,
+        prompt: `${prompt}, best quality, high resolution, detailed, trending on artstation`,
         negative_prompt: "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, nsfw",
         width: 512,
         height: 768,

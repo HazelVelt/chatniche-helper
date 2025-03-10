@@ -38,7 +38,8 @@ export const generateAIProfile = async (modelName?: string) => {
   let bio = "";
   if (ollamaStatus.isRunning && ollamaStatus.llmAvailable) {
     const bioPrompt = `Generate a short dating app bio for a ${age} year old ${gender} named ${firstName} who likes ${interests.join(', ')}. Keep it under 150 characters.`;
-    bio = await generateChatResponse(bioPrompt, ollamaStatus.llmModel);
+    const bioResponse = await generateChatResponse(bioPrompt, ollamaStatus.llmModel);
+    bio = bioResponse.text;
   } else {
     // Fallback to simulated bio
     const bioParts = [
@@ -100,7 +101,7 @@ export const generateAIProfile = async (modelName?: string) => {
 };
 
 // Generate an AI response for chat - uses Ollama if available
-export const generateAIResponse = async (message: string, modelName?: string) => {
+export const generateAIResponse = async (message: string, modelName?: string): Promise<{text: string, image?: string}> => {
   // Check if Ollama is available
   try {
     const status = await checkOllamaStatus();
@@ -144,10 +145,10 @@ export const generateAIResponse = async (message: string, modelName?: string) =>
   
   // 30% chance of asking a question
   if (Math.random() < 0.3) {
-    return questions[Math.floor(Math.random() * questions.length)];
+    return { text: questions[Math.floor(Math.random() * questions.length)] };
   }
   
-  return responses[Math.floor(Math.random() * responses.length)];
+  return { text: responses[Math.floor(Math.random() * responses.length)] };
 };
 
 // Generate multiple profiles

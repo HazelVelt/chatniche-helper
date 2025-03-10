@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Trash2 } from 'lucide-react';
@@ -19,6 +19,35 @@ interface ChatMessageProps {
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete }) => {
   const isUser = message.sender === 'user';
+  const [displayText, setDisplayText] = useState('');
+  const [isTyping, setIsTyping] = useState(!isUser);
+  const [typingComplete, setTypingComplete] = useState(isUser);
+  
+  // Simulate typing effect for AI messages
+  useEffect(() => {
+    if (isUser) {
+      setDisplayText(message.text);
+      return;
+    }
+
+    let i = 0;
+    setDisplayText('');
+    setIsTyping(true);
+    setTypingComplete(false);
+    
+    const typingInterval = setInterval(() => {
+      if (i < message.text.length) {
+        setDisplayText(prev => prev + message.text.charAt(i));
+        i++;
+      } else {
+        clearInterval(typingInterval);
+        setIsTyping(false);
+        setTypingComplete(true);
+      }
+    }, 15); // Speed of typing
+    
+    return () => clearInterval(typingInterval);
+  }, [message.text, isUser]);
   
   return (
     <div className={cn(
@@ -41,9 +70,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
           ? "bg-primary text-white rounded-tr-none shadow-sm"
           : "bg-secondary/60 text-foreground rounded-tl-none dark:bg-secondary/30 shadow-sm"
       )}>
-        <p className="whitespace-pre-wrap text-sm md:text-base">{message.text}</p>
+        <p className="whitespace-pre-wrap text-sm md:text-base">{displayText}</p>
         
-        {message.image && (
+        {!isUser && isTyping && (
+          <span className="inline-flex ml-1">
+            <span className="animate-pulse">.</span>
+            <span className="animate-pulse animation-delay-200">.</span>
+            <span className="animate-pulse animation-delay-400">.</span>
+          </span>
+        )}
+        
+        {message.image && typingComplete && (
           <div className="mt-2 rounded-lg overflow-hidden">
             <img 
               src={`data:image/jpeg;base64,${message.image}`}
