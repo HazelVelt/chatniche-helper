@@ -12,14 +12,15 @@ const ThemeToggle: React.FC = () => {
       onClick={toggleTheme}
       variant="ghost"
       size="icon"
-      className="rounded-full w-9 h-9 p-0"
+      className="rounded-full w-9 h-9 p-0 bg-secondary/50 hover:bg-secondary dark:bg-secondary/30 dark:hover:bg-secondary/50"
       aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       {theme === 'light' ? (
         <Moon size={18} className="text-foreground" />
       ) : (
-        <Sun size={18} className="text-foreground" />
+        <Sun size={18} className="text-primary" />
       )}
+      <span className="sr-only">Toggle theme</span>
     </Button>
   );
 };

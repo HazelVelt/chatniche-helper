@@ -4,8 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { generateChatResponse } from '@/utils/ollamaService';
 import ChatMessage from '@/components/ChatMessage';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Send, Trash2, Plus } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, Plus, MessageSquare, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -31,16 +32,12 @@ interface Match {
   bio: string;
 }
 
-// Mock data for demonstration
-const mockConversations: Conversation[] = [];
-
 const Chat = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [allConversations, setAllConversations] = useState<Conversation[]>(
-    // Try to load from localStorage first, fall back to mock data
-    JSON.parse(localStorage.getItem('conversations') || 'null') || mockConversations
+    JSON.parse(localStorage.getItem('conversations') || '[]')
   );
   const [matches, setMatches] = useState<Match[]>([]);
   const [message, setMessage] = useState('');
@@ -55,7 +52,37 @@ const Chat = () => {
   
   useEffect(() => {
     if (id) {
-      const conversation = allConversations.find(c => c.id === id);
+      // Check if conversation exists
+      let conversation = allConversations.find(c => c.id === id);
+      
+      // If conversation doesn't exist but we have an ID, check if it's a match ID
+      if (!conversation && id) {
+        const matchedProfile = matches.find(m => m.id === id);
+        
+        if (matchedProfile) {
+          // Create new conversation
+          conversation = {
+            id: matchedProfile.id,
+            matchName: matchedProfile.name,
+            matchImage: matchedProfile.image,
+            lastActive: new Date(),
+            messages: [
+              {
+                id: Date.now().toString(),
+                sender: 'match',
+                text: `Hi there! I'm ${matchedProfile.name}. ${matchedProfile.bio.split('.')[0]}.`,
+                timestamp: new Date(),
+              }
+            ]
+          };
+          
+          // Add to all conversations
+          const updatedConversations = [...allConversations, conversation];
+          setAllConversations(updatedConversations);
+          localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+        }
+      }
+      
       if (conversation) {
         setActiveConversation(conversation);
       } else {
@@ -64,7 +91,7 @@ const Chat = () => {
     } else {
       setActiveConversation(null);
     }
-  }, [id, allConversations, navigate]);
+  }, [id, allConversations, navigate, matches]);
   
   useEffect(() => {
     // Scroll to bottom of messages
@@ -90,6 +117,7 @@ const Chat = () => {
     const updatedConversation = {
       ...activeConversation,
       messages: [...activeConversation.messages, newMessage],
+      lastActive: new Date(),
     };
     
     // Update all conversations
@@ -181,7 +209,7 @@ const Chat = () => {
   
   const startNewConversation = (match: Match) => {
     // Check if conversation already exists
-    const existingConvo = allConversations.find(c => c.matchName === match.name);
+    const existingConvo = allConversations.find(c => c.id === match.id);
     
     if (existingConvo) {
       // Navigate to existing conversation
@@ -191,17 +219,16 @@ const Chat = () => {
     
     // Create new conversation
     const newConversation: Conversation = {
-      id: Date.now().toString(),
+      id: match.id,
       matchName: match.name,
       matchImage: match.image,
       lastActive: new Date(),
       messages: [
         {
-          id: '1',
+          id: Date.now().toString(),
           sender: 'match',
           text: `Hi there! I'm ${match.name}. ${match.bio.split('.')[0]}.`,
           timestamp: new Date(),
-          read: false
         }
       ]
     };
@@ -218,98 +245,152 @@ const Chat = () => {
   // Conversation list view with matches
   const ConversationList = () => (
     <div className="container max-w-lg mx-auto pt-16 pb-20 px-4">
-      <h1 className="text-2xl font-bold mb-6">Messages</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Messages</h1>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => navigate('/discover')} 
+          className="flex items-center gap-1 text-sm"
+        >
+          <UserPlus size={14} />
+          Find More
+        </Button>
+      </div>
       
       {/* Matches section */}
-      {matches.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-medium mb-3">Your Matches</h2>
-          <div className="flex overflow-x-auto pb-2 space-x-3 no-scrollbar">
+      <div className="mb-6 bg-card dark:bg-card/50 rounded-xl p-4 border border-border/30 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-medium flex items-center gap-2">
+            <Users size={18} className="text-primary" />
+            Your Matches
+          </h2>
+          <span className="text-xs text-muted-foreground bg-secondary dark:bg-secondary/30 px-2 py-1 rounded-full">
+            {matches.length} {matches.length === 1 ? 'match' : 'matches'}
+          </span>
+        </div>
+        
+        {matches.length > 0 ? (
+          <div className="flex overflow-x-auto pb-2 space-x-4 no-scrollbar">
             {matches.map(match => (
               <div 
                 key={match.id} 
-                className="flex flex-col items-center space-y-1 cursor-pointer"
+                className="flex flex-col items-center space-y-2 cursor-pointer transition-transform hover:translate-y-[-4px]"
                 onClick={() => startNewConversation(match)}
               >
                 <div className="relative">
                   <img 
                     src={match.image} 
                     alt={match.name} 
-                    className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow-md"
                   />
-                  <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-1">
-                    <Plus size={12} />
+                  <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-1 shadow-sm">
+                    <MessageSquare size={10} />
                   </div>
                 </div>
-                <span className="text-xs whitespace-nowrap">{match.name}</span>
+                <span className="text-xs font-medium whitespace-nowrap">{match.name}, {match.age}</span>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-4 bg-secondary/30 dark:bg-secondary/10 rounded-lg">
+            <p className="text-muted-foreground text-sm">No matches yet. Go discover!</p>
+            <Button 
+              variant="link" 
+              onClick={() => navigate('/discover')} 
+              className="mt-2 text-primary"
+            >
+              Start matching
+            </Button>
+          </div>
+        )}
+      </div>
       
       {/* Conversations section */}
-      <h2 className="text-lg font-medium mb-3">Conversations</h2>
-      
-      {allConversations.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">No conversations yet.</p>
-          <Button 
-            variant="outline" 
-            className="mt-4"
-            onClick={() => navigate('/discover')}
-          >
-            Find Matches
-          </Button>
+      <div className="bg-card dark:bg-card/50 rounded-xl p-4 border border-border/30 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-medium flex items-center gap-2">
+            <MessageSquare size={18} className="text-primary" />
+            Conversations
+          </h2>
+          {allConversations.length > 0 && (
+            <span className="text-xs text-muted-foreground bg-secondary dark:bg-secondary/30 px-2 py-1 rounded-full">
+              {allConversations.length}
+            </span>
+          )}
         </div>
-      ) : (
-        <div className="space-y-2">
-          {allConversations.map(conversation => (
-            <div 
-              key={conversation.id}
-              className="flex items-center p-3 rounded-xl hover:bg-secondary transition-colors relative group"
-            >
-              <div 
-                className="flex-1 flex items-center cursor-pointer"
-                onClick={() => navigate(`/chat/${conversation.id}`)}
+        
+        {allConversations.length === 0 ? (
+          <div className="text-center py-6 bg-secondary/30 dark:bg-secondary/10 rounded-lg">
+            <p className="text-muted-foreground mb-2">Start a conversation with your matches</p>
+            {matches.length > 0 ? (
+              <p className="text-sm text-muted-foreground">Click on any match above to chat</p>
+            ) : (
+              <Button 
+                variant="default" 
+                className="mt-2"
+                onClick={() => navigate('/discover')}
               >
-                <img 
-                  src={conversation.matchImage} 
-                  alt={conversation.matchName} 
-                  className="w-12 h-12 rounded-full object-cover mr-3"
-                />
-                
-                <div className="flex-1">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">{conversation.matchName}</h3>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date().toDateString() === conversation.lastActive.toDateString()
-                        ? conversation.lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : conversation.lastActive.toLocaleDateString([], { month: 'short', day: 'numeric' })
-                      }
-                    </span>
+                Find Matches
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2 mt-4">
+            {allConversations
+              .sort((a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime())
+              .map(conversation => (
+              <div 
+                key={conversation.id}
+                className="flex items-center p-3 rounded-xl hover:bg-secondary dark:hover:bg-secondary/30 transition-colors relative group border border-transparent hover:border-border/20"
+              >
+                <div 
+                  className="flex-1 flex items-center cursor-pointer"
+                  onClick={() => navigate(`/chat/${conversation.id}`)}
+                >
+                  <div className="relative">
+                    <img 
+                      src={conversation.matchImage} 
+                      alt={conversation.matchName} 
+                      className="w-12 h-12 rounded-full object-cover mr-3 border border-border/30"
+                    />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
                   </div>
                   
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conversation.messages.length > 0
-                      ? conversation.messages[conversation.messages.length - 1].text
-                      : 'No messages yet'
-                    }
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-medium">{conversation.matchName}</h3>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date().toDateString() === new Date(conversation.lastActive).toDateString()
+                          ? new Date(conversation.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : new Date(conversation.lastActive).toLocaleDateString([], { month: 'short', day: 'numeric' })
+                        }
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground truncate">
+                      {conversation.messages.length > 0
+                        ? conversation.messages[conversation.messages.length - 1].text
+                        : 'No messages yet'
+                      }
+                    </p>
+                  </div>
                 </div>
+                
+                <Button
+                  onClick={() => handleDeleteConversation(conversation.id)}
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Delete conversation"
+                >
+                  <Trash2 size={16} />
+                </Button>
               </div>
-              
-              <button
-                onClick={() => handleDeleteConversation(conversation.id)}
-                className="p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Delete conversation"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
   
@@ -320,28 +401,33 @@ const Chat = () => {
     return (
       <div className="flex flex-col h-screen">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30">
           <div className="container max-w-lg mx-auto">
             <div className="flex items-center p-4">
-              <button
-                className="mr-3 p-1 rounded-full hover:bg-secondary transition-colors"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mr-3 rounded-full"
                 onClick={() => navigate('/chat')}
               >
-                <ArrowLeft size={20} />
-              </button>
+                <ArrowLeft size={18} />
+              </Button>
               
-              <img 
-                src={activeConversation.matchImage} 
-                alt={activeConversation.matchName} 
-                className="w-10 h-10 rounded-full object-cover mr-3"
-              />
+              <div className="relative">
+                <img 
+                  src={activeConversation.matchImage} 
+                  alt={activeConversation.matchName} 
+                  className="w-10 h-10 rounded-full object-cover mr-3 border border-border/30"
+                />
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
+              </div>
               
               <div>
                 <h2 className="font-medium">{activeConversation.matchName}</h2>
                 <p className="text-xs text-muted-foreground">
-                  {new Date().toDateString() === activeConversation.lastActive.toDateString()
-                    ? `Active today, ${activeConversation.lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                    : `Active ${activeConversation.lastActive.toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+                  {new Date().toDateString() === new Date(activeConversation.lastActive).toDateString()
+                    ? `Active today, ${new Date(activeConversation.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : `Active ${new Date(activeConversation.lastActive).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
                   }
                 </p>
               </div>
@@ -352,7 +438,7 @@ const Chat = () => {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto pt-16 pb-20 px-4">
           <div className="container max-w-lg mx-auto">
-            <div className="py-4">
+            <div className="py-4 space-y-4">
               {activeConversation.messages.map(message => (
                 <ChatMessage 
                   key={message.id} 
@@ -363,7 +449,10 @@ const Chat = () => {
               
               {isTyping && (
                 <div className="flex mb-3">
-                  <div className="bg-secondary text-foreground rounded-2xl rounded-tl-none px-4 py-3">
+                  <div className={cn(
+                    "bg-secondary text-foreground rounded-2xl rounded-tl-none px-4 py-3",
+                    "dark:bg-secondary/50"
+                  )}>
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
                       <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: '0.2s' }} />
@@ -379,11 +468,11 @@ const Chat = () => {
         </div>
         
         {/* Message input */}
-        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-t border-border">
+        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-t border-border/30">
           <div className="container max-w-lg mx-auto p-4">
             <div className="flex items-center">
               <textarea
-                className="flex-1 bg-secondary rounded-2xl py-3 px-4 outline-none resize-none max-h-[120px] dark:bg-secondary/50 dark:border-border/50"
+                className="flex-1 bg-secondary/50 dark:bg-secondary/30 rounded-2xl py-3 px-4 outline-none resize-none max-h-[120px] border border-border/20 focus:border-primary/30 transition-colors"
                 placeholder="Type a message..."
                 rows={1}
                 value={message}
@@ -393,7 +482,8 @@ const Chat = () => {
               
               <Button
                 variant="default"
-                className="ml-2 rounded-full p-3 h-12 w-12 bg-primary hover:bg-primary/90"
+                size="icon"
+                className="ml-2 rounded-full h-12 w-12 bg-primary hover:bg-primary/90"
                 disabled={!message.trim() || isTyping}
                 onClick={sendMessage}
               >

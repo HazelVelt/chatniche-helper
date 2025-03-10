@@ -3,10 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
+import ThemeToggle from './ThemeToggle';
 
 const Navigation = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const { theme } = useTheme();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -34,7 +37,11 @@ const Navigation = () => {
   const DesktopNav = () => (
     <nav className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-4 hidden md:block",
-      scrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+      scrolled 
+        ? theme === 'dark' 
+          ? "bg-background/80 backdrop-blur-md border-b border-border/30" 
+          : "bg-white/80 backdrop-blur-md shadow-sm border-b border-border/10"
+        : "bg-transparent"
     )}>
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link to="/" className="text-xl font-bold text-primary flex items-center">
@@ -42,7 +49,7 @@ const Navigation = () => {
           <span className="ml-1 font-light">Match</span>
         </Link>
         
-        <div className="flex items-center space-x-8">
+        <div className="flex items-center space-x-6">
           {navLinks.filter(link => !link.showInFooter || link.showInMobile).map((link) => (
             <Link 
               key={link.path} 
@@ -55,6 +62,7 @@ const Navigation = () => {
               {link.label}
             </Link>
           ))}
+          <ThemeToggle />
         </div>
       </div>
     </nav>
@@ -62,7 +70,7 @@ const Navigation = () => {
   
   // Mobile navigation
   const MobileNav = () => (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-t border-border md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-t border-border dark:bg-background/80 dark:border-border/30 md:hidden">
       <div className="flex items-center justify-around">
         {navLinks.filter(link => link.showInMobile).map((link) => (
           <Link
