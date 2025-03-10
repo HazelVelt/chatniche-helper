@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { generateChatResponse } from '@/utils/ollamaService';
 import ChatMessage from '@/components/ChatMessage';
-import Button from '@/components/Button';
+import { Button } from '@/components/ui/button';
 import { ArrowLeft, Send, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -383,7 +383,7 @@ const Chat = () => {
           <div className="container max-w-lg mx-auto p-4">
             <div className="flex items-center">
               <textarea
-                className="flex-1 bg-secondary rounded-2xl py-3 px-4 outline-none resize-none max-h-[120px]"
+                className="flex-1 bg-secondary rounded-2xl py-3 px-4 outline-none resize-none max-h-[120px] dark:bg-secondary/50 dark:border-border/50"
                 placeholder="Type a message..."
                 rows={1}
                 value={message}
@@ -392,8 +392,8 @@ const Chat = () => {
               />
               
               <Button
-                variant="primary"
-                className="ml-2 rounded-full p-3 h-12 w-12"
+                variant="default"
+                className="ml-2 rounded-full p-3 h-12 w-12 bg-primary hover:bg-primary/90"
                 disabled={!message.trim() || isTyping}
                 onClick={sendMessage}
               >
