@@ -11,6 +11,7 @@ interface ChatMessageProps {
     text: string;
     timestamp: Date;
     read?: boolean;
+    image?: string;
   };
   matchImage?: string;
   onDelete?: (id: string) => void;
@@ -41,6 +42,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
           : "bg-secondary/60 text-foreground rounded-tl-none dark:bg-secondary/30 shadow-sm"
       )}>
         <p className="whitespace-pre-wrap text-sm md:text-base">{message.text}</p>
+        
+        {message.image && (
+          <div className="mt-2 rounded-lg overflow-hidden">
+            <img 
+              src={`data:image/jpeg;base64,${message.image}`}
+              alt="Generated"
+              className="w-full h-auto max-h-[300px] object-cover"
+            />
+          </div>
+        )}
+        
         <div className={cn(
           "text-xs mt-1.5 flex justify-between items-center gap-1",
           isUser ? "text-white/70" : "text-muted-foreground"

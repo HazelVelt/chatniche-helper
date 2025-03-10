@@ -89,14 +89,15 @@ export const useChat = () => {
     // Generate AI response
     setIsLoading(true);
     try {
-      const aiResponse = await generateAIResponse(text, modelSettings.llmModel);
+      const aiResponse = await generateChatResponse(text, modelSettings.llmModel);
       
       // Create AI response message
       const matchMessage: Message = {
         id: uuidv4(),
         sender: 'match',
-        text: aiResponse,
+        text: aiResponse.text,
         timestamp: new Date(),
+        image: aiResponse.image
       };
       
       // Add AI message to conversation

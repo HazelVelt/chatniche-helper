@@ -1,4 +1,3 @@
-
 /**
  * Utility for interacting with local Ollama models
  */
@@ -6,7 +5,7 @@
 // Default URL for Ollama API
 const OLLAMA_API_URL = 'http://localhost:11434/api';
 // Default URL for Stable Diffusion WebUI
-const SD_WEBUI_URL = 'http://localhost:7860/sdapi/v1';
+const SD_WEBUI_URL = 'http://127.0.0.1:7860/sdapi/v1';
 
 /**
  * Check if Ollama service is running and required models are available
@@ -103,7 +102,7 @@ export const checkOllamaStatus = async (): Promise<{
 export const generateChatResponse = async (
   message: string,
   modelName: string = 'llama3'
-): Promise<string> => {
+): Promise<{text: string, image?: string}> => {
   try {
     const response = await fetch(`${OLLAMA_API_URL}/generate`, {
       method: 'POST',
@@ -113,7 +112,7 @@ export const generateChatResponse = async (
       body: JSON.stringify({
         model: modelName,
         prompt: message,
-        system: "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly, flirty tone without being inappropriate. Don't use emojis, just text.",
+        system: "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. If the user asks for an image, include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation.",
         stream: false,
       }),
     });
@@ -123,10 +122,22 @@ export const generateChatResponse = async (
     }
     
     const data = await response.json();
-    return data.response || 'Sorry, I couldn\'t generate a response.';
+    const aiResponse = data.response;
+    
+    // Check if the response contains an image request
+    if (aiResponse.includes('IMAGE_REQUEST:')) {
+      const [text, imagePrompt] = aiResponse.split('IMAGE_REQUEST:');
+      const imageData = await generateProfileImage(imagePrompt.trim());
+      return {
+        text: text.trim(),
+        image: imageData
+      };
+    }
+    
+    return { text: aiResponse };
   } catch (error) {
     console.error('Error generating chat response:', error);
-    return 'Sorry, I couldn\'t connect to the AI service right now.';
+    return { text: 'Sorry, I couldn\'t connect to the AI service right now.' };
   }
 };
 
@@ -139,9 +150,7 @@ export const generateProfileImage = async (
 ): Promise<string> => {
   try {
     // First check if SD WebUI is available
-    const statusResponse = await fetch(`${SD_WEBUI_URL}/options`, {
-      method: 'GET'
-    });
+    const statusResponse = await fetch(`${SD_WEBUI_URL}/options`);
     
     if (!statusResponse.ok) {
       throw new Error('Stable Diffusion WebUI is not available');
@@ -165,13 +174,13 @@ export const generateProfileImage = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: `portrait photo of ${prompt}, high quality, natural lighting, photo-realistic, 4k, detailed face`,
+        prompt: prompt,
         negative_prompt: "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, nsfw",
         width: 512,
         height: 768,
         steps: 30,
         cfg_scale: 7,
-        sampler_name: "Euler a"
+        sampler_name: "DPM++ 2M Karras"
       }),
     });
     
@@ -195,9 +204,7 @@ export const checkStableDiffusionStatus = async (): Promise<{
   availableModels: string[];
 }> => {
   try {
-    const response = await fetch(`${SD_WEBUI_URL}/sd-models`, {
-      method: 'GET'
-    });
+    const response = await fetch(`${SD_WEBUI_URL}/sd-models`);
     
     if (!response.ok) {
       return {

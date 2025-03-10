@@ -1,10 +1,10 @@
-
 export interface Message {
   id: string;
   sender: 'user' | 'match';
   text: string;
   timestamp: Date;
   read?: boolean;
+  image?: string;
 }
 
 export interface Conversation {
