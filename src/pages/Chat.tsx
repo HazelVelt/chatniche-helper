@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { generateChatResponse } from '@/utils/ollamaService';
 import ChatMessage from '@/components/ChatMessage';
 import Button from '@/components/Button';
-import { ArrowLeft, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Message {
@@ -23,39 +23,16 @@ interface Conversation {
   messages: Message[];
 }
 
+interface Match {
+  id: string;
+  name: string;
+  image: string;
+  age: number;
+  bio: string;
+}
+
 // Mock data for demonstration
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    matchName: 'Sophia',
-    matchImage: 'https://source.unsplash.com/random/200x200?portrait,woman',
-    lastActive: new Date(),
-    messages: [
-      {
-        id: '1',
-        sender: 'match',
-        text: 'Hi there! I noticed we both like hiking. What\'s your favorite trail?',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        read: true
-      }
-    ]
-  },
-  {
-    id: '2',
-    matchName: 'James',
-    matchImage: 'https://source.unsplash.com/random/200x200?portrait,man',
-    lastActive: new Date(Date.now() - 30 * 60 * 1000),
-    messages: [
-      {
-        id: '1',
-        sender: 'match',
-        text: 'Hey! Have you seen the new Marvel movie?',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        read: true
-      }
-    ]
-  }
-];
+const mockConversations: Conversation[] = [];
 
 const Chat = () => {
   const { id } = useParams<{ id?: string }>();
@@ -65,9 +42,16 @@ const Chat = () => {
     // Try to load from localStorage first, fall back to mock data
     JSON.parse(localStorage.getItem('conversations') || 'null') || mockConversations
   );
+  const [matches, setMatches] = useState<Match[]>([]);
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Load matches from localStorage
+    const savedMatches = JSON.parse(localStorage.getItem('matches') || '[]');
+    setMatches(savedMatches);
+  }, []);
   
   useEffect(() => {
     if (id) {
@@ -195,10 +179,77 @@ const Chat = () => {
     toast.success('Conversation removed');
   };
   
-  // Conversation list view
+  const startNewConversation = (match: Match) => {
+    // Check if conversation already exists
+    const existingConvo = allConversations.find(c => c.matchName === match.name);
+    
+    if (existingConvo) {
+      // Navigate to existing conversation
+      navigate(`/chat/${existingConvo.id}`);
+      return;
+    }
+    
+    // Create new conversation
+    const newConversation: Conversation = {
+      id: Date.now().toString(),
+      matchName: match.name,
+      matchImage: match.image,
+      lastActive: new Date(),
+      messages: [
+        {
+          id: '1',
+          sender: 'match',
+          text: `Hi there! I'm ${match.name}. ${match.bio.split('.')[0]}.`,
+          timestamp: new Date(),
+          read: false
+        }
+      ]
+    };
+    
+    const updatedConversations = [...allConversations, newConversation];
+    setAllConversations(updatedConversations);
+    
+    // Navigate to the new conversation
+    navigate(`/chat/${newConversation.id}`);
+    
+    toast.success(`Started conversation with ${match.name}`);
+  };
+  
+  // Conversation list view with matches
   const ConversationList = () => (
     <div className="container max-w-lg mx-auto pt-16 pb-20 px-4">
       <h1 className="text-2xl font-bold mb-6">Messages</h1>
+      
+      {/* Matches section */}
+      {matches.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-medium mb-3">Your Matches</h2>
+          <div className="flex overflow-x-auto pb-2 space-x-3 no-scrollbar">
+            {matches.map(match => (
+              <div 
+                key={match.id} 
+                className="flex flex-col items-center space-y-1 cursor-pointer"
+                onClick={() => startNewConversation(match)}
+              >
+                <div className="relative">
+                  <img 
+                    src={match.image} 
+                    alt={match.name} 
+                    className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+                  />
+                  <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-1">
+                    <Plus size={12} />
+                  </div>
+                </div>
+                <span className="text-xs whitespace-nowrap">{match.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Conversations section */}
+      <h2 className="text-lg font-medium mb-3">Conversations</h2>
       
       {allConversations.length === 0 ? (
         <div className="text-center py-10">

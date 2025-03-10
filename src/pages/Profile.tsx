@@ -5,6 +5,7 @@ import { Settings, LogOut, ChevronRight, Heart, MessageSquare, Moon, Edit } from
 import { toast } from 'sonner';
 import ThemeToggle from '@/components/ThemeToggle';
 import ProfileForm from '@/components/ProfileForm';
+import ProfileSetup from '@/components/ProfileSetup';
 import DatingPreferences from '@/components/DatingPreferences';
 
 const Profile = () => {
@@ -62,6 +63,12 @@ const Profile = () => {
     setActiveSection(null);
   };
   
+  const handleCreateProfile = (newProfile: any) => {
+    setUserProfile(newProfile);
+    setProfileCreated(true);
+    localStorage.setItem('userProfile', JSON.stringify(newProfile));
+  };
+  
   const handleSavePreferences = (updatedPreferences: any) => {
     setDatingPreferences({
       ...datingPreferences,
@@ -77,17 +84,13 @@ const Profile = () => {
   
   // Renders the content based on active section or profile creation state
   const renderContent = () => {
-    // If profile hasn't been created yet, always show the profile form
+    // If profile hasn't been created yet, show the profile setup
     if (!profileCreated) {
       return (
         <div className="animate-fade-in">
-          <h2 className="text-2xl font-bold mb-6">Create Your Profile</h2>
-          <p className="text-muted-foreground mb-6">Please create your profile to start matching with others.</p>
-          <ProfileForm 
-            userProfile={userProfile}
-            onSave={handleSaveProfile}
-            onCancel={() => {}} // No cancel option for initial creation
-          />
+          <h2 className="text-2xl font-bold mb-6 text-center">Create Your Profile</h2>
+          <p className="text-muted-foreground mb-6 text-center">Please create your profile to start matching with others.</p>
+          <ProfileSetup onComplete={handleCreateProfile} />
         </div>
       );
     }
