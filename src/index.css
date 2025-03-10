@@ -56,6 +56,21 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+  
+  /* Hide scrollbars but keep functionality */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+  
+  .custom-scrollbar {
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
   }
 }
 
@@ -74,5 +89,48 @@
   }
   .animation-delay-500 {
     animation-delay: 0.5s;
+  }
+  
+  /* Glass effect for cards */
+  .glass {
+    @apply bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/10;
+  }
+  
+  /* Card shadow effect */
+  .card-shadow {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+  
+  .dark .card-shadow {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Glow effect for buttons */
+  .glow-effect {
+    position: relative;
+    z-index: 0;
+  }
+  
+  .glow-effect:before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--radius);
+    background: radial-gradient(circle at 50% 50%, hsl(var(--primary)), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .glow-effect:hover:before {
+    opacity: 0.4;
+  }
+  
+  /* Neo blur effect for dark theme */
+  .dark .neo-blur {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
   }
 }

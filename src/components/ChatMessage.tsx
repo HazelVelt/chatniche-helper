@@ -44,7 +44,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
         setIsTyping(false);
         setTypingComplete(true);
       }
-    }, 15); // Speed of typing
+    }, 10); // Faster typing speed for better UX
     
     return () => clearInterval(typingInterval);
   }, [message.text, isUser]);
@@ -83,7 +83,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
         {message.image && typingComplete && (
           <div className="mt-2 rounded-lg overflow-hidden">
             <img 
-              src={`data:image/jpeg;base64,${message.image}`}
+              src={message.image.startsWith('data:') ? message.image : `data:image/jpeg;base64,${message.image}`}
               alt="Generated"
               className="w-full h-auto max-h-[300px] object-cover"
             />

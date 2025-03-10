@@ -29,6 +29,7 @@ export const checkOllamaStatus = async (): Promise<{
     });
     
     if (!response.ok) {
+      console.log("Ollama service not running or not responding");
       return {
         isRunning: false,
         llmAvailable: false,
@@ -40,6 +41,7 @@ export const checkOllamaStatus = async (): Promise<{
     }
     
     const data = await response.json();
+    console.log("Ollama models available:", data);
     const models = data.models || [];
     
     // Get all available LLM models
@@ -58,8 +60,11 @@ export const checkOllamaStatus = async (): Promise<{
       
       if (sdResponse.ok) {
         const sdData = await sdResponse.json();
+        console.log("SD WebUI models available:", sdData);
         stableDiffusionAvailable = true;
         availableSdModels = sdData.map((model: any) => model.title || model.model_name);
+      } else {
+        console.log("SD WebUI response not OK:", await sdResponse.text());
       }
     } catch (error) {
       console.error('Error checking SD WebUI status:', error);
@@ -99,6 +104,14 @@ export const generateChatResponse = async (
   modelName: string = 'llama3'
 ): Promise<{text: string, image?: string}> => {
   try {
+    console.log(`Generating response with model: ${modelName}, message: ${message}`);
+    
+    // Try to detect if this is an image request
+    const isImageRequest = /generate.*image|show.*picture|draw|create.*image|make.*picture|visualize/i.test(message);
+    
+    // System prompt adjusted for NSFW content (with warning)
+    const systemPrompt = "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. You may respond to NSFW topics naturally if the user mentions them. If the user asks you to generate or create an image, include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation.";
+    
     const response = await fetch(`${OLLAMA_API_URL}/generate`, {
       method: 'POST',
       headers: {
@@ -107,26 +120,53 @@ export const generateChatResponse = async (
       body: JSON.stringify({
         model: modelName,
         prompt: message,
-        system: "You are a friendly and engaging person in a dating app chat. Keep your responses concise (1-3 sentences), show genuine interest, ask occasional follow-up questions, and maintain a friendly tone. If the user asks for an image, include 'IMAGE_REQUEST:' followed by a detailed prompt for image generation.",
+        system: systemPrompt,
         stream: false,
       }),
     });
     
     if (!response.ok) {
+      console.error('Failed to generate response from Ollama:', await response.text());
       throw new Error('Failed to generate response');
     }
     
     const data = await response.json();
     const aiResponse = data.response;
+    console.log("Raw LLM response:", aiResponse);
     
-    // Check if the response contains an image request
+    // Check if the AI inserted an image request
     if (aiResponse.includes('IMAGE_REQUEST:')) {
       const [text, imagePrompt] = aiResponse.split('IMAGE_REQUEST:');
-      const imageData = await generateProfileImage(imagePrompt.trim());
-      return {
-        text: text.trim(),
-        image: imageData
-      };
+      console.log("Image prompt detected:", imagePrompt.trim());
+      try {
+        const imageData = await generateProfileImage(imagePrompt.trim());
+        return {
+          text: text.trim(),
+          image: imageData
+        };
+      } catch (imageError) {
+        console.error("Failed to generate image:", imageError);
+        return {
+          text: text.trim() + "\n\n(I tried to generate an image but encountered an error. Please try again later.)"
+        };
+      }
+    }
+    
+    // If it's detected as an image request but LLM didn't insert IMAGE_REQUEST tag,
+    // we'll add one directly
+    if (isImageRequest && !aiResponse.includes('IMAGE_REQUEST:')) {
+      try {
+        console.log("User asked for image but LLM didn't generate an IMAGE_REQUEST tag. Generating image directly.");
+        const imagePrompt = message.replace(/generate|create|draw|show|make|picture|image|visualize/gi, '').trim();
+        const imageData = await generateProfileImage(imagePrompt);
+        return {
+          text: aiResponse,
+          image: imageData
+        };
+      } catch (imageError) {
+        console.error("Failed to generate direct image:", imageError);
+        return { text: aiResponse };
+      }
     }
     
     return { text: aiResponse };
@@ -141,7 +181,7 @@ export const generateChatResponse = async (
  */
 export const generateProfileImage = async (
   prompt: string,
-  modelName: string = 'v1-5-pruned-emaonly'
+  modelName: string = ''
 ): Promise<string> => {
   try {
     // First check if SD WebUI is available
@@ -150,14 +190,14 @@ export const generateProfileImage = async (
     });
     
     if (!statusResponse.ok) {
-      console.error('Stable Diffusion WebUI is not available');
-      return '';
+      console.error('Stable Diffusion WebUI is not available', await statusResponse.text());
+      throw new Error('Stable Diffusion WebUI is not available');
     }
     
-    // Select the model if specified
+    // If a specific model is requested, try to select it
     if (modelName) {
       try {
-        await fetch(`${SD_WEBUI_URL}/options`, {
+        const modelSelectResponse = await fetch(`${SD_WEBUI_URL}/options`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -166,10 +206,24 @@ export const generateProfileImage = async (
             sd_model_checkpoint: modelName
           })
         });
+        
+        if (!modelSelectResponse.ok) {
+          console.error('Failed to select SD model:', await modelSelectResponse.text());
+        } else {
+          console.log(`Successfully selected SD model: ${modelName}`);
+        }
       } catch (error) {
         console.error('Error selecting SD model:', error);
       }
     }
+    
+    // Enhanced prompt with quality keywords but allows NSFW content
+    const enhancedPrompt = `${prompt}, best quality, high resolution, detailed, trending on artstation`;
+    
+    // Milder negative prompt that only filters major issues but allows NSFW
+    const negativePrompt = "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation";
+    
+    console.log("Generating image with prompt:", enhancedPrompt);
     
     // Generate the image
     const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {
@@ -178,8 +232,8 @@ export const generateProfileImage = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: `${prompt}, best quality, high resolution, detailed, trending on artstation`,
-        negative_prompt: "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, nsfw",
+        prompt: enhancedPrompt,
+        negative_prompt: negativePrompt,
         width: 512,
         height: 768,
         steps: 30,
@@ -189,14 +243,16 @@ export const generateProfileImage = async (
     });
     
     if (!response.ok) {
+      console.error('Failed to generate image from SD WebUI:', await response.text());
       throw new Error('Failed to generate image');
     }
     
     const data = await response.json();
+    console.log("Image generation successful");
     return data.images?.[0] || '';
   } catch (error) {
     console.error('Error generating profile image:', error);
-    return '';
+    throw error;
   }
 };
 
@@ -208,9 +264,11 @@ export const checkStableDiffusionStatus = async (): Promise<{
   availableModels: string[];
 }> => {
   try {
+    console.log("Checking Stable Diffusion WebUI status...");
     const response = await fetch(`${SD_WEBUI_URL}/sd-models`);
     
     if (!response.ok) {
+      console.error("SD WebUI response not OK:", await response.text());
       return {
         isRunning: false,
         availableModels: []
@@ -218,6 +276,7 @@ export const checkStableDiffusionStatus = async (): Promise<{
     }
     
     const data = await response.json();
+    console.log("SD WebUI available models:", data);
     return {
       isRunning: true,
       availableModels: data.map((model: any) => model.title || model.model_name)
