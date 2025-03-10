@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileCard from '@/components/ProfileCard';
@@ -129,14 +130,16 @@ const Discover = () => {
 
   return (
     <div className="min-h-screen pt-16 pb-20 md:pb-8 px-4 flex flex-col items-center justify-center bg-gradient-to-b from-background to-secondary/20 dark:from-background dark:to-secondary/10">
-      {/* Decorative elements */}
+      {/* Handcrafted decorative elements */}
       <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-primary/5 rounded-full blur-3xl opacity-60 z-0"></div>
       <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-secondary/10 rounded-full blur-3xl opacity-40 z-0"></div>
+      <div className="absolute top-[25%] left-[10%] w-8 h-8 bg-amber-300/30 rounded-full blur-md z-0 animate-pulse-subtle"></div>
+      <div className="absolute bottom-[30%] right-[15%] w-6 h-6 bg-rose-300/30 rounded-full blur-md z-0 animate-pulse-subtle" style={{ animationDelay: '1s' }}></div>
       
       <div className="container max-w-lg mx-auto flex flex-col h-full relative z-10">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Discover</h1>
+            <h1 className="text-2xl font-bold handwritten">Discover</h1>
             <p className="text-muted-foreground text-sm">Find your AI match</p>
           </div>
           <Button 
@@ -180,7 +183,7 @@ const Discover = () => {
               </Button>
             </div>
           ) : (
-            <div className="w-full">
+            <div className="w-full washi-tape">
               <ProfileCard
                 profile={profiles[currentIndex]}
                 onLike={handleLike}
@@ -196,7 +199,7 @@ const Discover = () => {
               <div className="animate-scale">
                 <Heart size={80} className="text-primary animate-pulse-subtle mb-6" />
               </div>
-              <h2 className="text-4xl font-bold text-white mb-4 animate-slide-down">It's a Match!</h2>
+              <h2 className="text-4xl font-bold text-white mb-4 animate-slide-down handwritten">It's a Match!</h2>
               <div className="flex items-center gap-4 mb-8 animate-slide-up" style={{ animationDelay: '200ms' }}>
                 <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-primary">
                   <img 
@@ -214,7 +217,7 @@ const Discover = () => {
                   />
                 </div>
               </div>
-              <p className="text-white/80 text-lg animate-fade-in" style={{ animationDelay: '400ms' }}>
+              <p className="text-white/80 text-lg animate-fade-in handwritten-normal" style={{ animationDelay: '400ms' }}>
                 You and {matchedProfile.name} liked each other!
               </p>
               <Button 
