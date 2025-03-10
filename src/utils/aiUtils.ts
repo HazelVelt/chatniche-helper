@@ -1,4 +1,3 @@
-
 // This is a simulated version that checks for Ollama first, then falls back to faker if needed
 import { faker } from '@faker-js/faker';
 import { checkOllamaStatus, generateChatResponse, generateProfileImage, checkStableDiffusionStatus } from './ollamaService';
@@ -54,8 +53,13 @@ export const generateAIProfile = async (modelName?: string) => {
     bio = generateSimulatedBio(interests);
   }
   
+  // For image generation, use Unsplash with specific categories
+  const categories = ['person', 'portrait', 'fashion', 'model'];
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  const genderParam = gender === 'female' ? 'woman' : 'man';
+  let imageUrl = `https://source.unsplash.com/featured/800x1000/?${category},${genderParam}`;
+  
   // Check if Stable Diffusion WebUI is available for image generation
-  let imageUrl = '';
   if (sdStatus.isRunning && sdStatus.availableModels.length > 0) {
     try {
       // Use the specified model or fall back to the first available SD model
@@ -73,13 +77,6 @@ export const generateAIProfile = async (modelName?: string) => {
     } catch (error) {
       console.error('Error generating image with Stable Diffusion:', error);
     }
-  }
-  
-  // If image generation failed, fall back to placeholder
-  if (!imageUrl) {
-    console.log("Using fallback image from Unsplash");
-    const imageIndex = Math.floor(Math.random() * 10) + 1;
-    imageUrl = `https://source.unsplash.com/random/600x800?portrait,${gender},${imageIndex}`;
   }
   
   return {
@@ -120,6 +117,9 @@ const generateSimulatedBio = (interests: string[]) => {
 
 // Generate an AI response for chat - uses Ollama if available
 export const generateAIResponse = async (message: string, modelName?: string): Promise<{text: string, image?: string}> => {
+  // Check if this is an image request
+  const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic/i.test(message.toLowerCase());
+  
   // Check if Ollama is available
   try {
     const status = await checkOllamaStatus();
@@ -137,26 +137,35 @@ export const generateAIResponse = async (message: string, modelName?: string): P
     console.error('Error checking Ollama status:', error);
   }
   
-  // Fallback to simulated responses if Ollama is not available
+  // Simulate response delay
   await new Promise(resolve => setTimeout(resolve, 800));
   
-  // Check if message might be requesting an image
-  const isImageRequest = /generate.*image|show.*picture|draw|create.*image|make.*picture|visualize/i.test(message);
-  
+  // If it's an image request, generate both text and image
   if (isImageRequest) {
-    // Try to generate an image with SD WebUI if possible
+    const categories = ['person', 'portrait', 'fashion', 'model'];
+    const category = categories[Math.floor(Math.random() * categories.length)];
+    const gender = Math.random() > 0.5 ? 'woman' : 'man';
+    const imageUrl = `https://source.unsplash.com/featured/800x1000/?${category},${gender}`;
+    
+    // Fetch the image and convert to base64
     try {
-      const sdStatus = await checkStableDiffusionStatus();
-      if (sdStatus.isRunning) {
-        const imagePrompt = message.replace(/generate|create|draw|show|make|picture|image|visualize/gi, '').trim();
-        const imageData = await generateProfileImage(imagePrompt);
-        return {
-          text: "Here's the image you asked for!",
-          image: imageData
-        };
-      }
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+      
+      return {
+        text: "Here's a photo of me! What do you think? 😊",
+        image: base64 as string
+      };
     } catch (error) {
-      console.error("Failed to generate image for fallback response:", error);
+      console.error('Error fetching image:', error);
+      return {
+        text: "I'd love to share a photo, but I'm having trouble with the image right now. Can we chat more first? 😊"
+      };
     }
   }
   

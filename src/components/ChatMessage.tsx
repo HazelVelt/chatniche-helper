@@ -22,6 +22,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(!isUser);
   const [typingComplete, setTypingComplete] = useState(isUser);
+  const [showImage, setShowImage] = useState(false);
   
   // Simulate typing effect for AI messages
   useEffect(() => {
@@ -34,6 +35,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
     setDisplayText('');
     setIsTyping(true);
     setTypingComplete(false);
+    setShowImage(false);
     
     const typingInterval = setInterval(() => {
       if (i < message.text.length) {
@@ -43,11 +45,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
         clearInterval(typingInterval);
         setIsTyping(false);
         setTypingComplete(true);
+        if (message.image) {
+          setTimeout(() => setShowImage(true), 300);
+        }
       }
-    }, 10); // Faster typing speed for better UX
+    }, 20); // Slightly faster typing speed
     
     return () => clearInterval(typingInterval);
-  }, [message.text, isUser]);
+  }, [message.text, isUser, message.image]);
   
   return (
     <div className={cn(
@@ -73,19 +78,22 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, matchImage, onDelete
         <p className="whitespace-pre-wrap text-sm md:text-base">{displayText}</p>
         
         {!isUser && isTyping && (
-          <span className="inline-flex ml-1">
-            <span className="animate-pulse">.</span>
-            <span className="animate-pulse animation-delay-200">.</span>
-            <span className="animate-pulse animation-delay-400">.</span>
-          </span>
+          <div className="flex space-x-1 mt-1 h-4">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce animation-delay-200" />
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce animation-delay-400" />
+          </div>
         )}
         
         {message.image && typingComplete && (
-          <div className="mt-2 rounded-lg overflow-hidden">
+          <div className={cn(
+            "mt-2 rounded-lg overflow-hidden transition-all duration-300",
+            showImage ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}>
             <img 
               src={message.image.startsWith('data:') ? message.image : `data:image/jpeg;base64,${message.image}`}
               alt="Generated"
-              className="w-full h-auto max-h-[300px] object-cover"
+              className="w-full h-auto max-h-[300px] object-cover rounded-lg"
             />
           </div>
         )}
