@@ -9,20 +9,25 @@ import DatingPreferences from '@/components/DatingPreferences';
 
 const Profile = () => {
   const [activeSection, setActiveSection] = useState<'profile' | 'preferences' | null>(null);
+  const [profileCreated, setProfileCreated] = useState(false);
   
   const [userProfile, setUserProfile] = useState(() => {
     const savedProfile = localStorage.getItem('userProfile');
-    return savedProfile ? JSON.parse(savedProfile) : {
-      name: 'Alex Morgan',
-      age: 28,
-      location: 'San Francisco, CA',
-      bio: 'Software engineer by day, photographer by night. Looking for someone to share adventures with.',
-      imageUrl: 'https://source.unsplash.com/random/400x400?portrait',
-      interests: ['Photography', 'Hiking', 'Coffee', 'Travel', 'Music'],
+    if (savedProfile) {
+      setProfileCreated(true);
+      return JSON.parse(savedProfile);
+    }
+    return {
+      name: '',
+      age: 18,
+      location: '',
+      bio: '',
+      imageUrl: '',
+      interests: [],
       stats: {
-        matches: 32,
-        conversations: 14,
-        likes: 128
+        matches: 0,
+        conversations: 0,
+        likes: 0
       }
     };
   });
@@ -38,8 +43,11 @@ const Profile = () => {
   });
   
   useEffect(() => {
-    localStorage.setItem('userProfile', JSON.stringify(userProfile));
-  }, [userProfile]);
+    // Only save to localStorage if the profile has been created
+    if (profileCreated) {
+      localStorage.setItem('userProfile', JSON.stringify(userProfile));
+    }
+  }, [userProfile, profileCreated]);
   
   useEffect(() => {
     localStorage.setItem('datingPreferences', JSON.stringify(datingPreferences));
@@ -50,6 +58,7 @@ const Profile = () => {
       ...userProfile,
       ...updatedProfile
     });
+    setProfileCreated(true);
     setActiveSection(null);
   };
   
@@ -66,8 +75,23 @@ const Profile = () => {
     // Logout logic would go here
   };
   
-  // Renders the content based on active section
+  // Renders the content based on active section or profile creation state
   const renderContent = () => {
+    // If profile hasn't been created yet, always show the profile form
+    if (!profileCreated) {
+      return (
+        <div className="animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6">Create Your Profile</h2>
+          <p className="text-muted-foreground mb-6">Please create your profile to start matching with others.</p>
+          <ProfileForm 
+            userProfile={userProfile}
+            onSave={handleSaveProfile}
+            onCancel={() => {}} // No cancel option for initial creation
+          />
+        </div>
+      );
+    }
+    
     if (activeSection === 'profile') {
       return (
         <div className="animate-fade-in">
@@ -97,7 +121,7 @@ const Profile = () => {
     return (
       <>
         {/* Profile Card */}
-        <div className="bg-card border border-border rounded-2xl card-shadow mb-6 animate-fade-in">
+        <div className="bg-card border border-border rounded-2xl card-shadow mb-6 animate-fade-in dark:border-border/30">
           <div className="relative">
             <img 
               src={userProfile.imageUrl} 
@@ -106,7 +130,7 @@ const Profile = () => {
             />
             
             <button 
-              className="absolute top-3 right-3 bg-white/90 text-foreground backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors"
+              className="absolute top-3 right-3 bg-white/90 dark:bg-black/60 text-foreground backdrop-blur-sm p-2 rounded-full hover:bg-white dark:hover:bg-black/80 transition-colors"
               onClick={() => setActiveSection('profile')}
             >
               <Edit size={18} />
@@ -130,7 +154,7 @@ const Profile = () => {
                 {userProfile.interests.map((interest: string, index: number) => (
                   <span 
                     key={index}
-                    className="bg-secondary text-foreground text-sm py-1 px-3 rounded-full"
+                    className="bg-secondary dark:bg-secondary/30 text-foreground text-sm py-1 px-3 rounded-full"
                   >
                     {interest}
                   </span>
@@ -139,15 +163,15 @@ const Profile = () => {
             </div>
             
             <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-secondary rounded-xl p-3 text-center">
+              <div className="bg-secondary dark:bg-secondary/30 rounded-xl p-3 text-center">
                 <div className="text-xl font-semibold text-primary">{userProfile.stats.matches}</div>
                 <div className="text-xs text-muted-foreground">Matches</div>
               </div>
-              <div className="bg-secondary rounded-xl p-3 text-center">
+              <div className="bg-secondary dark:bg-secondary/30 rounded-xl p-3 text-center">
                 <div className="text-xl font-semibold text-primary">{userProfile.stats.conversations}</div>
                 <div className="text-xs text-muted-foreground">Chats</div>
               </div>
-              <div className="bg-secondary rounded-xl p-3 text-center">
+              <div className="bg-secondary dark:bg-secondary/30 rounded-xl p-3 text-center">
                 <div className="text-xl font-semibold text-primary">{userProfile.stats.likes}</div>
                 <div className="text-xs text-muted-foreground">Likes</div>
               </div>
@@ -156,7 +180,7 @@ const Profile = () => {
         </div>
         
         {/* Settings Menu */}
-        <div className="bg-card border border-border rounded-2xl card-shadow animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="bg-card border border-border rounded-2xl card-shadow animate-fade-in dark:border-border/30" style={{ animationDelay: '100ms' }}>
           <div className="p-4">
             <h3 className="font-medium mb-2">Settings</h3>
             
@@ -185,7 +209,7 @@ const Profile = () => {
             </div>
           </div>
           
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border dark:border-border/30">
             <Button 
               variant="outline" 
               className="w-full text-red-500 hover:bg-red-500/10"
@@ -204,14 +228,14 @@ const Profile = () => {
     <div className="min-h-screen pt-16 pb-20 md:pb-8 px-4">
       <div className="container max-w-lg mx-auto">
         {/* Header */}
-        {!activeSection && (
+        {profileCreated && !activeSection && (
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Profile</h1>
           </div>
         )}
         
         {/* Back button when in edit mode */}
-        {activeSection && (
+        {profileCreated && activeSection && (
           <button
             onClick={() => setActiveSection(null)}
             className="mb-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
