@@ -59,11 +59,6 @@ const Index = () => {
       {/* Texture overlay */}
       <div className="texture-overlay"></div>
       
-      {/* Decorative elements */}
-      <div className="blob-shape bg-primary/30 w-[400px] h-[400px] rounded-full -left-20 -top-20 float-animation"></div>
-      <div className="blob-shape bg-blue-400/20 w-[600px] h-[600px] rounded-full right-[10%] top-[20%] float-animation-delay-2"></div>
-      <div className="blob-shape bg-purple-400/20 w-[500px] h-[500px] rounded-full left-[20%] top-[40%] float-animation-delay-4"></div>
-      
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-20">
         <div className="container mx-auto text-center z-10 mt-[-80px] md:mt-0 max-w-5xl">
@@ -199,9 +194,6 @@ const Index = () => {
       
       {/* How it works Section */}
       <section className="py-20 px-4 bg-secondary/30 dark:bg-secondary/10 relative">
-        <div className="blob-shape bg-primary/10 w-[300px] h-[300px] rounded-full left-[5%] top-[10%]"></div>
-        <div className="blob-shape bg-blue-400/10 w-[350px] h-[350px] rounded-full right-[5%] bottom-[10%]"></div>
-        
         <div className="container mx-auto relative z-10">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">

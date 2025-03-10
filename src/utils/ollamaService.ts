@@ -205,11 +205,7 @@ export const generateImage = async (
         height: 768,
         steps: 30,
         cfg_scale: 7,
-        sampler_name: "DPM++ 2M Karras",
-        sampler_index: "DPM++ 2M Karras",
-        batch_size: 1,
-        n_iter: 1,
-        seed: -1,
+        sampler_index: "Euler",
         restore_faces: true,
         send_images: true,
         save_images: false
@@ -228,7 +224,7 @@ export const generateImage = async (
       throw new Error('No images returned from API');
     }
     
-    return data.images[0];
+    return `data:image/png;base64,${data.images[0]}`;
   } catch (error) {
     console.error('Error generating image:', error);
     

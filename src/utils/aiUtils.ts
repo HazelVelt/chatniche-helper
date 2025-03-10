@@ -1,3 +1,4 @@
+
 // This is a simulated version that checks for Ollama first, then falls back to faker if needed
 import { faker } from '@faker-js/faker';
 import { checkOllamaStatus, generateChatResponse, generateImage, checkStableDiffusionStatus } from './ollamaService';
@@ -63,12 +64,7 @@ export const generateAIProfile = async (modelName?: string) => {
       console.log("Generating profile image with prompt:", prompt);
       const imageData = await generateImage(prompt);
       if (imageData) {
-        // Check if imageData is already a data URL
-        if (imageData.startsWith('data:')) {
-          imageUrl = imageData;
-        } else {
-          imageUrl = `data:image/jpeg;base64,${imageData}`;
-        }
+        imageUrl = imageData;
         console.log("Profile image generated successfully");
       }
     } catch (error) {
@@ -204,12 +200,23 @@ export const generateAIResponse = async (message: string, modelName?: string): P
   // If it's an image request, generate both text and image
   if (isImageRequest) {
     try {
-      const imageUrl = await getUnsplashImage(Math.random() > 0.5 ? 'female' : 'male');
-      
-      return {
-        text: "Here's a photo of me! What do you think? 😊",
-        image: imageUrl
-      };
+      // Try Stable Diffusion for image generation first
+      const sdStatus = await checkStableDiffusionStatus();
+      if (sdStatus.isRunning) {
+        const prompt = "attractive young adult, dating profile photo, professional photography, natural lighting, smiling";
+        const imageData = await generateImage(prompt);
+        return {
+          text: "Here's a photo of me! What do you think? 😊",
+          image: imageData
+        };
+      } else {
+        // Fall back to Unsplash
+        const imageUrl = await getUnsplashImage(Math.random() > 0.5 ? 'female' : 'male');
+        return {
+          text: "Here's a photo of me! What do you think? 😊",
+          image: imageUrl
+        };
+      }
     } catch (error) {
       console.error('Error fetching image:', error);
       return {
