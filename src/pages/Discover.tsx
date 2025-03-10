@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileCard from '@/components/ProfileCard';
@@ -106,22 +105,21 @@ const Discover = () => {
       setMatchedProfile(null);
       
       // Move to next profile
-      if (currentIndex < profiles.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-      } else {
-        // No more profiles, refresh
-        refreshProfiles();
-      }
+      moveToNextProfile();
     }, 2000);
   };
 
   const handlePass = (id: string) => {
     // Move to next profile
+    moveToNextProfile();
+  };
+  
+  const moveToNextProfile = () => {
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // No more profiles, refresh
-      refreshProfiles();
+      // No more profiles, load new ones
+      loadProfiles();
     }
   };
 

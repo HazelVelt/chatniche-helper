@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { generateChatResponse } from '@/utils/ollamaService';
@@ -46,22 +45,18 @@ const Chat = () => {
   const messageContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // Load matches from localStorage
     const savedMatches = JSON.parse(localStorage.getItem('matches') || '[]');
     setMatches(savedMatches);
   }, []);
   
   useEffect(() => {
     if (id) {
-      // Check if conversation exists
       let conversation = allConversations.find(c => c.id === id);
       
-      // If conversation doesn't exist but we have an ID, check if it's a match ID
       if (!conversation && id) {
         const matchedProfile = matches.find(m => m.id === id);
         
         if (matchedProfile) {
-          // Create new conversation
           conversation = {
             id: matchedProfile.id,
             matchName: matchedProfile.name,
@@ -77,7 +72,6 @@ const Chat = () => {
             ]
           };
           
-          // Add to all conversations
           const updatedConversations = [...allConversations, conversation];
           setAllConversations(updatedConversations);
           localStorage.setItem('conversations', JSON.stringify(updatedConversations));
@@ -95,12 +89,10 @@ const Chat = () => {
   }, [id, allConversations, navigate, matches]);
   
   useEffect(() => {
-    // Scroll to bottom of messages
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages]);
   
   useEffect(() => {
-    // Save conversations to localStorage
     localStorage.setItem('conversations', JSON.stringify(allConversations));
   }, [allConversations]);
   
@@ -114,14 +106,12 @@ const Chat = () => {
       timestamp: new Date(),
     };
     
-    // Update conversation with new message
     const updatedConversation = {
       ...activeConversation,
       messages: [...activeConversation.messages, newMessage],
       lastActive: new Date(),
     };
     
-    // Update all conversations
     const updatedConversations = allConversations.map(c => 
       c.id === updatedConversation.id ? updatedConversation : c
     );
@@ -130,13 +120,10 @@ const Chat = () => {
     setActiveConversation(updatedConversation);
     setMessage('');
     
-    // Simulate AI typing
     setIsTyping(true);
     try {
-      // Generate AI response using Ollama
       const response = await generateChatResponse(message);
       
-      // Create AI response message
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'match',
@@ -144,14 +131,12 @@ const Chat = () => {
         timestamp: new Date(),
       };
       
-      // Update conversation with AI response
       const conversationWithResponse = {
         ...updatedConversation,
         messages: [...updatedConversation.messages, aiMessage],
         lastActive: new Date(),
       };
       
-      // Update all conversations
       const conversationsWithResponse = updatedConversations.map(c => 
         c.id === conversationWithResponse.id ? conversationWithResponse : c
       );
@@ -176,7 +161,6 @@ const Chat = () => {
   const handleDeleteMessage = (messageId: string) => {
     if (!activeConversation) return;
     
-    // Remove the message from conversation
     const updatedMessages = activeConversation.messages.filter(m => m.id !== messageId);
     
     const updatedConversation = {
@@ -184,7 +168,6 @@ const Chat = () => {
       messages: updatedMessages
     };
     
-    // Update all conversations
     const updatedConversations = allConversations.map(c => 
       c.id === updatedConversation.id ? updatedConversation : c
     );
@@ -196,7 +179,6 @@ const Chat = () => {
   };
   
   const handleDeleteConversation = (conversationId: string) => {
-    // Remove the conversation
     const updatedConversations = allConversations.filter(c => c.id !== conversationId);
     
     setAllConversations(updatedConversations);
@@ -209,16 +191,13 @@ const Chat = () => {
   };
   
   const startNewConversation = (match: Match) => {
-    // Check if conversation already exists
     const existingConvo = allConversations.find(c => c.id === match.id);
     
     if (existingConvo) {
-      // Navigate to existing conversation
       navigate(`/chat/${existingConvo.id}`);
       return;
     }
     
-    // Create new conversation
     const newConversation: Conversation = {
       id: match.id,
       matchName: match.name,
@@ -237,13 +216,11 @@ const Chat = () => {
     const updatedConversations = [...allConversations, newConversation];
     setAllConversations(updatedConversations);
     
-    // Navigate to the new conversation
     navigate(`/chat/${newConversation.id}`);
     
     toast.success(`Started conversation with ${match.name}`);
   };
   
-  // Conversation list view with matches
   const ConversationList = () => (
     <div className="container max-w-lg mx-auto pt-16 pb-20 px-4">
       <div className="flex items-center justify-between mb-6">
@@ -259,7 +236,6 @@ const Chat = () => {
         </Button>
       </div>
       
-      {/* Matches section */}
       <div className="mb-6 bg-card dark:bg-card/50 rounded-xl p-4 border border-border/30 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium flex items-center gap-2">
@@ -307,7 +283,6 @@ const Chat = () => {
         )}
       </div>
       
-      {/* Conversations section */}
       <div className="bg-card dark:bg-card/50 rounded-xl p-4 border border-border/30 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium flex items-center gap-2">
@@ -395,13 +370,11 @@ const Chat = () => {
     </div>
   );
   
-  // Individual conversation view
   const ConversationView = () => {
     if (!activeConversation) return null;
     
     return (
       <div className="flex flex-col h-screen">
-        {/* Header */}
         <div className="fixed top-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30">
           <div className="container max-w-lg mx-auto">
             <div className="flex items-center p-4">
@@ -437,7 +410,6 @@ const Chat = () => {
           </div>
         </div>
         
-        {/* Messages */}
         <div 
           ref={messageContainerRef}
           className="flex-1 overflow-y-auto no-scrollbar pt-20 pb-24 px-4"
@@ -473,7 +445,6 @@ const Chat = () => {
           </div>
         </div>
         
-        {/* Message input */}
         <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-md border-t border-border/30">
           <div className="container max-w-lg mx-auto p-4">
             <div className="flex items-center">
@@ -492,6 +463,7 @@ const Chat = () => {
                 className="ml-2 rounded-full h-12 w-12 bg-primary hover:bg-primary/90"
                 disabled={!message.trim() || isTyping}
                 onClick={sendMessage}
+                aria-label="Send message"
               >
                 <Send size={18} />
               </Button>
@@ -502,7 +474,6 @@ const Chat = () => {
     );
   };
   
-  // Render conversation list or individual conversation
   return activeConversation ? <ConversationView /> : <ConversationList />;
 };
 
