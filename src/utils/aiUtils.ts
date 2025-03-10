@@ -1,15 +1,13 @@
 
 // This is a simulated version that checks for Ollama first, then falls back to faker if needed
 import { faker } from '@faker-js/faker';
-import { checkOllamaStatus, generateChatResponse, generateProfileImage } from './ollamaService';
+import { checkOllamaStatus, generateChatResponse, generateProfileImage, checkStableDiffusionStatus } from './ollamaService';
 
 // Generate an AI profile
 export const generateAIProfile = async (modelName?: string) => {
-  // Check if Ollama is available first
-  const status = await checkOllamaStatus();
-  
-  // If Ollama is running with required models, use it
-  // Otherwise fall back to simulated data
+  // Check if Ollama and SD WebUI are available
+  const ollamaStatus = await checkOllamaStatus();
+  const sdStatus = await checkStableDiffusionStatus();
   
   // Simulate processing time
   await new Promise(resolve => setTimeout(resolve, 1500));
@@ -36,38 +34,47 @@ export const generateAIProfile = async (modelName?: string) => {
     possibleInterests.splice(randomIndex, 1);
   }
   
-  // Generate a bio using simulated LLM
-  const bioParts = [
-    ["Adventurous soul", "Creative spirit", "Free thinker", "Outdoor enthusiast", "City explorer"],
-    ["looking for", "searching for", "hoping to find", "on a quest for"],
-    ["genuine connections", "meaningful conversations", "new experiences", "someone special", "fun and adventure"]
-  ];
+  // Generate a bio using simulated LLM or Ollama if available
+  let bio = "";
+  if (ollamaStatus.isRunning && ollamaStatus.llmAvailable) {
+    const bioPrompt = `Generate a short dating app bio for a ${age} year old ${gender} named ${firstName} who likes ${interests.join(', ')}. Keep it under 150 characters.`;
+    bio = await generateChatResponse(bioPrompt, ollamaStatus.llmModel);
+  } else {
+    // Fallback to simulated bio
+    const bioParts = [
+      ["Adventurous soul", "Creative spirit", "Free thinker", "Outdoor enthusiast", "City explorer"],
+      ["looking for", "searching for", "hoping to find", "on a quest for"],
+      ["genuine connections", "meaningful conversations", "new experiences", "someone special", "fun and adventure"]
+    ];
+    
+    const bioStart = bioParts[0][Math.floor(Math.random() * bioParts[0].length)];
+    const bioMiddle = bioParts[1][Math.floor(Math.random() * bioParts[1].length)];
+    const bioEnd = bioParts[2][Math.floor(Math.random() * bioParts[2].length)];
+    
+    const bioExtras = [
+      `Love ${interests[0].toLowerCase()} and ${interests[1].toLowerCase()}.`,
+      `Passionate about ${interests[0].toLowerCase()}.`,
+      `When I'm not working, you'll find me ${faker.word.verb()}ing.`,
+      `${faker.person.jobTitle()} by day, ${interests[0]} enthusiast by night.`,
+      `Ask me about my ${faker.commerce.product().toLowerCase()}.`
+    ];
+    
+    const randomExtra = bioExtras[Math.floor(Math.random() * bioExtras.length)];
+    bio = `${bioStart} ${bioMiddle} ${bioEnd}. ${randomExtra}`;
+  }
   
-  const bioStart = bioParts[0][Math.floor(Math.random() * bioParts[0].length)];
-  const bioMiddle = bioParts[1][Math.floor(Math.random() * bioParts[1].length)];
-  const bioEnd = bioParts[2][Math.floor(Math.random() * bioParts[2].length)];
-  
-  const bioExtras = [
-    `Love ${interests[0].toLowerCase()} and ${interests[1].toLowerCase()}.`,
-    `Passionate about ${interests[0].toLowerCase()}.`,
-    `When I'm not working, you'll find me ${faker.word.verb()}ing.`,
-    `${faker.person.jobTitle()} by day, ${interests[0]} enthusiast by night.`,
-    `Ask me about my ${faker.commerce.product().toLowerCase()}.`
-  ];
-  
-  const randomExtra = bioExtras[Math.floor(Math.random() * bioExtras.length)];
-  
-  const bio = `${bioStart} ${bioMiddle} ${bioEnd}. ${randomExtra}`;
-  
-  // Check if Stable Diffusion is available for image generation
+  // Check if Stable Diffusion WebUI is available for image generation
   let imageUrl = '';
-  if (status.isRunning && status.stableDiffusionAvailable) {
+  if (sdStatus.isRunning && sdStatus.availableModels.length > 0) {
     try {
       // Use the specified model or fall back to the first available SD model
-      const sdModel = modelName || status.availableModels.stableDiffusion[0] || 'sd';
-      const imageData = await generateProfileImage(`person, ${gender}, portrait, headshot`, sdModel);
-      if (imageData) {
-        imageUrl = `data:image/jpeg;base64,${imageData}`;
+      const sdModel = modelName || (sdStatus.availableModels.length > 0 ? sdStatus.availableModels[0] : '');
+      
+      if (sdModel) {
+        const imageData = await generateProfileImage(`${gender}, young adult, ${age} years old, attractive, portrait photo`, sdModel);
+        if (imageData) {
+          imageUrl = `data:image/jpeg;base64,${imageData}`;
+        }
       }
     } catch (error) {
       console.error('Error generating image with Stable Diffusion:', error);

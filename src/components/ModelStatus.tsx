@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { checkOllamaStatus } from '@/utils/ollamaService';
+import { checkOllamaStatus, checkStableDiffusionStatus } from '@/utils/ollamaService';
 import { useSettings } from '@/contexts/SettingsContext';
 import { AlertTriangle, CheckCircle, XCircle, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,20 +35,36 @@ const ModelStatus: React.FC = () => {
   const checkStatus = async () => {
     setIsChecking(true);
     try {
-      const result = await checkOllamaStatus();
-      setStatus(result);
-      setAvailableModels(result.availableModels);
+      // Check Ollama status
+      const ollamaResult = await checkOllamaStatus();
       
-      if (!result.isRunning) {
+      // Check Stable Diffusion WebUI status separately
+      const sdResult = await checkStableDiffusionStatus();
+      
+      const combinedStatus = {
+        ...ollamaResult,
+        stableDiffusionAvailable: sdResult.isRunning,
+        availableModels: {
+          llm: ollamaResult.availableModels.llm,
+          stableDiffusion: sdResult.availableModels
+        }
+      };
+      
+      setStatus(combinedStatus);
+      setAvailableModels(combinedStatus.availableModels);
+      
+      if (!ollamaResult.isRunning) {
         toast.error('Ollama is not running. Please start Ollama service.');
-      } else if (result.error) {
-        toast.warning(result.error);
-      } else if (result.llmAvailable && result.stableDiffusionAvailable) {
-        toast.success('All AI models are available and ready to use.');
+      } else if (!sdResult.isRunning) {
+        toast.warning('Stable Diffusion WebUI is not running. Image generation will use fallbacks.');
+      } else if (combinedStatus.error) {
+        toast.warning(combinedStatus.error);
+      } else if (ollamaResult.llmAvailable && sdResult.isRunning) {
+        toast.success('All AI services are available and ready to use.');
       }
     } catch (error) {
-      console.error('Failed to check Ollama status:', error);
-      toast.error('Failed to check AI models status.');
+      console.error('Failed to check services status:', error);
+      toast.error('Failed to check AI services status.');
     } finally {
       setIsChecking(false);
     }
@@ -107,7 +123,7 @@ const ModelStatus: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="font-medium">Stable Diffusion:</span>
+          <span className="font-medium">SD WebUI:</span>
           {status.stableDiffusionAvailable ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
@@ -117,7 +133,7 @@ const ModelStatus: React.FC = () => {
           ) : (
             <span className="flex items-center gap-1 text-amber-500">
               <AlertTriangle size={14} />
-              Missing
+              Offline
             </span>
           )}
         </div>

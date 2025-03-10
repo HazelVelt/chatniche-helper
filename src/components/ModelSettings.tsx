@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/contexts/SettingsContext';
-import { checkOllamaStatus } from '@/utils/ollamaService';
+import { checkOllamaStatus, checkStableDiffusionStatus } from '@/utils/ollamaService';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -26,25 +26,39 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     const fetchModels = async () => {
       setIsLoading(true);
       try {
-        const status = await checkOllamaStatus();
-        if (status.isRunning) {
-          // Update available models
-          setAvailableModels(status.availableModels);
-          
-          // If current models aren't in the available list, select the first ones
-          if (status.availableModels.llm.length > 0 && !status.availableModels.llm.includes(selectedSettings.llmModel)) {
-            setSelectedSettings(prev => ({ ...prev, llmModel: status.availableModels.llm[0] }));
-          }
-          
-          if (status.availableModels.stableDiffusion.length > 0 && 
-              !status.availableModels.stableDiffusion.includes(selectedSettings.stableDiffusionModel)) {
-            setSelectedSettings(prev => ({ 
-              ...prev, 
-              stableDiffusionModel: status.availableModels.stableDiffusion[0] 
-            }));
-          }
-        } else {
-          toast.error("Ollama service is not running. Please start it to see available models.");
+        // Check Ollama for LLM models
+        const ollamaStatus = await checkOllamaStatus();
+        
+        // Check SD WebUI for SD models
+        const sdStatus = await checkStableDiffusionStatus();
+        
+        // Combine available models
+        const combinedModels = {
+          llm: ollamaStatus.availableModels.llm,
+          stableDiffusion: sdStatus.availableModels
+        };
+        
+        setAvailableModels(combinedModels);
+        
+        // If current models aren't in the available list, select the first ones
+        if (combinedModels.llm.length > 0 && !combinedModels.llm.includes(selectedSettings.llmModel)) {
+          setSelectedSettings(prev => ({ ...prev, llmModel: combinedModels.llm[0] }));
+        }
+        
+        if (combinedModels.stableDiffusion.length > 0 && 
+            !combinedModels.stableDiffusion.includes(selectedSettings.stableDiffusionModel)) {
+          setSelectedSettings(prev => ({ 
+            ...prev, 
+            stableDiffusionModel: combinedModels.stableDiffusion[0] 
+          }));
+        }
+        
+        if (!ollamaStatus.isRunning) {
+          toast.error("Ollama service is not running. Please start it to use LLM features.");
+        }
+        
+        if (!sdStatus.isRunning) {
+          toast.warning("Stable Diffusion WebUI is not running. Please start it for image generation.");
         }
       } catch (error) {
         toast.error("Failed to fetch available models");
@@ -83,7 +97,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
         {availableModels.llm.length === 0 ? (
           <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-4">
             <p className="text-amber-800 dark:text-amber-200">
-              No LLM models found. Please install models using Ollama.
+              No LLM models found. Please start Ollama and install models.
             </p>
           </div>
         ) : (
@@ -114,7 +128,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
         {availableModels.stableDiffusion.length === 0 ? (
           <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-4">
             <p className="text-amber-800 dark:text-amber-200">
-              No Stable Diffusion models found. Please install models using Ollama.
+              No Stable Diffusion models found. Please start the Stable Diffusion WebUI.
             </p>
           </div>
         ) : (

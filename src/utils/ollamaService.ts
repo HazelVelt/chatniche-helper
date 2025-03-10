@@ -5,6 +5,8 @@
 
 // Default URL for Ollama API
 const OLLAMA_API_URL = 'http://localhost:11434/api';
+// Default URL for Stable Diffusion WebUI
+const SD_WEBUI_URL = 'http://localhost:7860/sdapi/v1';
 
 /**
  * Check if Ollama service is running and required models are available
@@ -40,25 +42,35 @@ export const checkOllamaStatus = async (): Promise<{
     const data = await response.json();
     const models = data.models || [];
     
-    // Look for LLM and stable diffusion models
+    // Look for LLM models
     const llmModels = models.filter((model: any) => 
       model.name.includes('llama') || 
       model.name.includes('mixtral') || 
       model.name.includes('mistral')
     );
     
-    const stableDiffusionModels = models.filter((model: any) => 
-      model.name.includes('stable-diffusion') || 
-      model.name.includes('sd') ||
-      model.name.includes('forge')
-    );
-    
     const llmModel = llmModels.length > 0 ? llmModels[0].name : '';
-    const stableDiffusionAvailable = stableDiffusionModels.length > 0;
     
     // Extract model names for UI selection
     const availableLlmModels = llmModels.map((model: any) => model.name);
-    const availableSdModels = stableDiffusionModels.map((model: any) => model.name);
+    
+    // Check if SD WebUI is available
+    let stableDiffusionAvailable = false;
+    let availableSdModels: string[] = [];
+    
+    try {
+      const sdResponse = await fetch(`${SD_WEBUI_URL}/sd-models`, {
+        method: 'GET'
+      });
+      
+      if (sdResponse.ok) {
+        const sdData = await sdResponse.json();
+        stableDiffusionAvailable = true;
+        availableSdModels = sdData.map((model: any) => model.title || model.model_name);
+      }
+    } catch (error) {
+      console.error('Error checking SD WebUI status:', error);
+    }
     
     return {
       isRunning: true,
@@ -69,8 +81,8 @@ export const checkOllamaStatus = async (): Promise<{
         llm: availableLlmModels,
         stableDiffusion: availableSdModels
       },
-      error: (!llmModels.length || !stableDiffusionModels.length) ? 
-        `Required models missing: ${!llmModels.length ? 'LLM' : ''}${(!llmModels.length && !stableDiffusionModels.length) ? ', ' : ''}${!stableDiffusionModels.length ? 'Stable Diffusion' : ''}` : 
+      error: (!llmModels.length || !stableDiffusionAvailable) ? 
+        `Required services missing: ${!llmModels.length ? 'LLM' : ''}${(!llmModels.length && !stableDiffusionAvailable) ? ', ' : ''}${!stableDiffusionAvailable ? 'Stable Diffusion WebUI' : ''}` : 
         undefined
     };
   } catch (error) {
@@ -119,22 +131,47 @@ export const generateChatResponse = async (
 };
 
 /**
- * Generate AI profile image using local Stable Diffusion
+ * Generate AI profile image using Stable Diffusion WebUI
  */
 export const generateProfileImage = async (
   prompt: string,
-  modelName: string = 'sd'
+  modelName: string = 'stable_diffusion'
 ): Promise<string> => {
   try {
-    const response = await fetch(`${OLLAMA_API_URL}/generate`, {
+    // First check if SD WebUI is available
+    const statusResponse = await fetch(`${SD_WEBUI_URL}/options`, {
+      method: 'GET'
+    });
+    
+    if (!statusResponse.ok) {
+      throw new Error('Stable Diffusion WebUI is not available');
+    }
+    
+    // Select the model
+    await fetch(`${SD_WEBUI_URL}/options`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sd_model_checkpoint: modelName
+      })
+    });
+    
+    // Generate the image
+    const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: modelName,
-        prompt: `portrait photo of ${prompt}, high quality, natural lighting, photo-realistic`,
-        stream: false,
+        prompt: `portrait photo of ${prompt}, high quality, natural lighting, photo-realistic, 4k, detailed face`,
+        negative_prompt: "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, nsfw",
+        width: 512,
+        height: 768,
+        steps: 30,
+        cfg_scale: 7,
+        sampler_name: "Euler a"
       }),
     });
     
@@ -143,9 +180,42 @@ export const generateProfileImage = async (
     }
     
     const data = await response.json();
-    return data.image || '';
+    return data.images?.[0] || '';
   } catch (error) {
     console.error('Error generating profile image:', error);
     return '';
+  }
+};
+
+/**
+ * Check if Stable Diffusion WebUI is available
+ */
+export const checkStableDiffusionStatus = async (): Promise<{
+  isRunning: boolean;
+  availableModels: string[];
+}> => {
+  try {
+    const response = await fetch(`${SD_WEBUI_URL}/sd-models`, {
+      method: 'GET'
+    });
+    
+    if (!response.ok) {
+      return {
+        isRunning: false,
+        availableModels: []
+      };
+    }
+    
+    const data = await response.json();
+    return {
+      isRunning: true,
+      availableModels: data.map((model: any) => model.title || model.model_name)
+    };
+  } catch (error) {
+    console.error('Error checking Stable Diffusion WebUI status:', error);
+    return {
+      isRunning: false,
+      availableModels: []
+    };
   }
 };
