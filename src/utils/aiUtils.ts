@@ -1,5 +1,6 @@
+
 import { v4 as uuidv4 } from 'uuid';
-import { checkOllamaStatus, generateImageWithStableDiffusion } from './ollamaService';
+import { checkOllamaStatus, generateImageWithStableDiffusion, checkStableDiffusionStatus, generateChatResponse } from './ollamaService';
 import { faker } from '@faker-js/faker';
 
 // Generate an AI profile
@@ -61,7 +62,7 @@ export const generateAIProfile = async (modelName?: string) => {
     try {
       const prompt = `${gender}, young adult, ${age} years old, attractive, portrait photo, highly detailed, photorealistic`;
       console.log("Generating profile image with prompt:", prompt);
-      const imageData = await generateImage(prompt);
+      const imageData = await generateImageWithStableDiffusion(prompt);
       if (imageData) {
         imageUrl = imageData;
         console.log("Profile image generated successfully");
@@ -233,8 +234,14 @@ export const generateAIResponse = async (
       const ollamaStatus = await checkOllamaStatus();
       
       if (ollamaStatus.isRunning && ollamaStatus.llmAvailable) {
-        // In a real app, this would call the Ollama API
-        // For now, return a mockup response
+        // Try to generate response with Ollama LLM
+        try {
+          const aiResponse = await generateChatResponse(message, model);
+          return aiResponse;
+        } catch (llmError) {
+          console.error("Error generating response with LLM:", llmError);
+          // Fall back to simulated response
+        }
       }
     } catch (ollamaError) {
       console.error("Failed to check Ollama status:", ollamaError);
