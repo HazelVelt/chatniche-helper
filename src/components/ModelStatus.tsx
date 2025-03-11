@@ -31,6 +31,7 @@ const ModelStatus: React.FC = () => {
   });
   
   const [isChecking, setIsChecking] = useState(false);
+  const [mockedStatus, setMockedStatus] = useState(false);
   
   const checkStatus = async () => {
     setIsChecking(true);
@@ -52,6 +53,7 @@ const ModelStatus: React.FC = () => {
       
       setStatus(combinedStatus);
       setAvailableModels(combinedStatus.availableModels);
+      setMockedStatus(false);
       
       if (!ollamaResult.isRunning) {
         toast.error('Ollama is not running. Please start Ollama service.');
@@ -67,6 +69,31 @@ const ModelStatus: React.FC = () => {
       toast.error('Failed to check AI services status.');
     } finally {
       setIsChecking(false);
+    }
+  };
+  
+  // Mocked status for demo purposes - allows testing UI without local services running
+  const enableMockedServices = () => {
+    if (!status.isRunning && !status.stableDiffusionAvailable) {
+      setMockedStatus(true);
+      const mockedAvailableModels = {
+        llm: ['llama3', 'mistral', 'phi'],
+        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+      };
+      
+      setStatus({
+        isRunning: true,
+        llmAvailable: true,
+        llmModel: 'llama3',
+        stableDiffusionAvailable: true,
+        availableModels: mockedAvailableModels
+      });
+      
+      setAvailableModels(mockedAvailableModels);
+      toast.success('Using simulated AI services for demo purposes.');
+    } else {
+      setMockedStatus(false);
+      checkStatus();
     }
   };
   
@@ -140,13 +167,22 @@ const ModelStatus: React.FC = () => {
       </div>
       
       <div className="flex items-center gap-3">
-        <button 
-          onClick={checkStatus}
-          disabled={isChecking}
-          className="text-xs text-primary hover:underline"
-        >
-          {isChecking ? 'Checking...' : 'Check again'}
-        </button>
+        {!status.isRunning && !status.stableDiffusionAvailable && !mockedStatus ? (
+          <button 
+            onClick={enableMockedServices}
+            className="text-xs text-amber-500 hover:text-amber-600 hover:underline"
+          >
+            Use demo mode
+          </button>
+        ) : (
+          <button 
+            onClick={checkStatus}
+            disabled={isChecking}
+            className="text-xs text-primary hover:underline"
+          >
+            {isChecking ? 'Checking...' : 'Check again'}
+          </button>
+        )}
         
         <button 
           onClick={goToSettings}

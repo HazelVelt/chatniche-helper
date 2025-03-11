@@ -10,6 +10,8 @@ interface SettingsContextType {
     stableDiffusion: string[];
   };
   setAvailableModels: (models: { llm: string[], stableDiffusion: string[] }) => void;
+  useMockedServices: boolean;
+  setUseMockedServices: (value: boolean) => void;
 }
 
 const defaultSettings: ModelSettings = {
@@ -26,7 +28,9 @@ const SettingsContext = createContext<SettingsContextType>({
   modelSettings: defaultSettings,
   updateModelSettings: () => {},
   availableModels: defaultAvailableModels,
-  setAvailableModels: () => {}
+  setAvailableModels: () => {},
+  useMockedServices: false,
+  setUseMockedServices: () => {}
 });
 
 export const useSettings = () => useContext(SettingsContext);
@@ -38,6 +42,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [availableModels, setAvailableModels] = useState(defaultAvailableModels);
+  const [useMockedServices, setUseMockedServices] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('modelSettings', JSON.stringify(modelSettings));
@@ -52,7 +57,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       modelSettings, 
       updateModelSettings, 
       availableModels, 
-      setAvailableModels 
+      setAvailableModels,
+      useMockedServices,
+      setUseMockedServices
     }}>
       {children}
     </SettingsContext.Provider>

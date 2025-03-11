@@ -1,6 +1,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { checkOllamaStatus, generateImageWithStableDiffusion, checkStableDiffusionStatus, generateChatResponse } from './ollamaService';
+import { 
+  checkOllamaStatus, 
+  generateImageWithStableDiffusion, 
+  checkStableDiffusionStatus, 
+  generateChatResponse 
+} from './ollamaService';
 import { faker } from '@faker-js/faker';
 
 // Generate an AI profile
@@ -216,6 +221,14 @@ export const generateAIResponse = async (
             };
           } catch (imageError) {
             console.error("Error generating image with SD:", imageError);
+            // Fall back to Unsplash for image
+            const gender = Math.random() > 0.5 ? 'female' : 'male';
+            const unsplashImage = await getUnsplashImage(gender);
+            
+            return {
+              text: "Here's a picture I took recently. What do you think? 😊",
+              image: unsplashImage
+            };
           }
         }
       } catch (sdCheckError) {
