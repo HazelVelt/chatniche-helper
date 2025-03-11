@@ -5,6 +5,7 @@ import { Conversation, Message, Match } from '@/types/chat';
 import { generateAIResponse } from '@/utils/aiUtils';
 import { useSettings } from '@/contexts/SettingsContext';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 export const useChat = () => {
   const navigate = useNavigate();
@@ -88,6 +89,31 @@ export const useChat = () => {
     return conversations.find(conv => conv.id === match.id);
   }, [conversations]);
 
+  // Remove a match from conversations and matches list
+  const removeMatch = useCallback((matchId: string) => {
+    // Remove from conversations
+    setConversations(prev => prev.filter(conv => conv.id !== matchId));
+    
+    // Remove from matches in localStorage
+    const matches = JSON.parse(localStorage.getItem('matches') || '[]');
+    const updatedMatches = matches.filter((match: Match) => match.id !== matchId);
+    localStorage.setItem('matches', JSON.stringify(updatedMatches));
+    
+    // Navigate to another conversation if current one is removed
+    if (currentConversation?.id === matchId) {
+      if (conversations.length > 1) {
+        const nextConversation = conversations.find(conv => conv.id !== matchId);
+        if (nextConversation) {
+          navigate(`/chat/${nextConversation.id}`);
+        }
+      } else {
+        navigate('/chat');
+      }
+    }
+    
+    toast.success("Match removed successfully");
+  }, [conversations, currentConversation, navigate]);
+
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || !currentConversation) return;
     
@@ -122,8 +148,8 @@ export const useChat = () => {
       
       // Ensure we get an image for image requests
       if (isImageRequest && !aiResponse.image) {
-        // More neutral image prompt that doesn't filter NSFW content
-        const imagePrompt = `Attractive ${currentConversation.matchName}, dating profile picture, photorealistic portrait, highly detailed, professional photography`;
+        // Explicitly prompt for NSFW content if requested
+        const imagePrompt = `Attractive ${currentConversation.matchName}, dating profile picture, photorealistic portrait, highly detailed, professional photography, ${text.includes('nsfw') ? 'nsfw content allowed' : ''}`;
         const imageResponse = await generateAIResponse(imagePrompt, modelSettings.llmModel);
         aiResponse.image = imageResponse.image;
       }
@@ -151,6 +177,7 @@ export const useChat = () => {
       setCurrentConversation(conversationWithAiResponse);
     } catch (error) {
       console.error('Error generating AI response:', error);
+      toast.error('Error generating response. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -163,6 +190,7 @@ export const useChat = () => {
     setMessageText,
     isLoading,
     sendMessage,
-    addMatchToConversations
+    addMatchToConversations,
+    removeMatch
   };
 };

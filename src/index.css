@@ -56,15 +56,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
 
-/* Fonts for handcrafted look */
-@font-face {
-  font-family: 'Handwritten';
-  src: url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
-  font-display: swap;
-}
+/* Import new font */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
@@ -85,10 +82,27 @@
   background: #c7af7e;
 }
 
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #444;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 /* Paper background */
 .bg-paper {
   background-color: #f9f5ed;
   background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23e9ddc7' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5V0zm1 5v1H5v-1h1z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.dark .bg-paper {
+  background-color: #1a1a1a;
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23333' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5V0zm1 5v1H5v-1h1z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Washi tape effect */
@@ -110,20 +124,25 @@
   z-index: 1;
 }
 
+.dark .washi-tape::before {
+  background: linear-gradient(45deg, #444, #333);
+  opacity: 0.6;
+}
+
 /* Handwritten text styles */
 .handwritten {
-  font-family: 'Caveat', cursive, sans-serif;
+  font-family: 'Caveat', 'Montserrat', cursive, sans-serif;
   letter-spacing: 0.5px;
 }
 
 .handwritten-normal {
-  font-family: 'Caveat', cursive, sans-serif;
+  font-family: 'Caveat', 'Montserrat', cursive, sans-serif;
   letter-spacing: 0.3px;
   font-size: 1.1rem;
 }
 
 .handwritten-small {
-  font-family: 'Caveat', cursive, sans-serif;
+  font-family: 'Caveat', 'Montserrat', cursive, sans-serif;
   letter-spacing: 0.3px;
   font-size: 0.9rem;
 }
@@ -136,7 +155,14 @@
     2px 2px 0px rgba(0,0,0,0.08);
 }
 
-/* Additional animation: pulse subtle for handcrafted elements */
+.card-shadow-dark {
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.3), 
+    0 1px 2px rgba(0,0,0,0.5),
+    2px 2px 0px rgba(0,0,0,0.2);
+}
+
+/* Animation classes */
 @keyframes pulse-subtle {
   0%, 100% {
     opacity: 1;
@@ -215,6 +241,17 @@
   animation: scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* Card swipe animations */
+.card-swipe-left {
+  transform: translateX(-150%) rotate(-30deg) !important;
+  transition: transform 0.5s ease !important;
+}
+
+.card-swipe-right {
+  transform: translateX(150%) rotate(30deg) !important;
+  transition: transform 0.5s ease !important;
+}
+
 /* Navigation link styles */
 .nav-link {
   @apply relative text-foreground/80 hover:text-foreground transition-colors after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left;
@@ -222,4 +259,11 @@
 
 .nav-link-active {
   @apply text-primary after:scale-x-100 after:origin-bottom-left;
+}
+
+/* Import handwritten font */
+@font-face {
+  font-family: 'Caveat';
+  src: url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
+  font-display: swap;
 }

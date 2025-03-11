@@ -4,6 +4,7 @@ import { Heart, X, MessageSquare, Eye } from 'lucide-react';
 import Button from './Button';
 import { cn } from '@/lib/utils';
 import ProfileViewModal from './ProfileViewModal';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ProfileCardProps {
   profile: {
@@ -33,6 +34,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [showFullProfile, setShowFullProfile] = useState(false);
+  const { theme } = useTheme();
   
   const handleTouchStart = (e: React.TouchEvent) => {
     setStartX(e.touches[0].clientX);
@@ -127,10 +129,13 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   
   return (
     <>
-      <div className="flex flex-col items-center space-y-4">
+      <div className="flex flex-col items-center space-y-6">
         <div 
           ref={cardRef}
-          className="relative w-full max-w-sm aspect-[3/4] overflow-hidden rounded-2xl bg-white card-shadow transition-transform duration-300"
+          className={cn(
+            "relative w-full max-w-sm aspect-[3/4] overflow-hidden rounded-2xl transition-transform duration-300 shadow-lg",
+            theme === 'dark' ? 'bg-gray-800 card-shadow-dark' : 'bg-white card-shadow'
+          )}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -160,12 +165,19 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
           
           {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+          <div className={cn(
+            "absolute inset-0",
+            theme === 'dark' 
+              ? "bg-gradient-to-t from-black/90 via-black/30 to-transparent" 
+              : "bg-gradient-to-t from-black/80 via-black/20 to-transparent"
+          )}></div>
           
           {/* Profile info */}
           <div className={cn(
             "absolute bottom-0 left-0 right-0 p-5 text-white transition-all duration-300",
-            detailsExpanded ? "bg-black/60 h-3/5" : "bg-transparent"
+            detailsExpanded 
+              ? theme === 'dark' ? "bg-black/70 h-3/5" : "bg-black/60 h-3/5" 
+              : "bg-transparent"
           )}>
             <div className="flex justify-between items-end mb-2">
               <div>
@@ -219,11 +231,16 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
         </div>
         
-        {/* Action buttons - moved below the card */}
-        <div className="flex justify-center space-x-6">
+        {/* Action buttons - below the card */}
+        <div className="flex justify-center space-x-6 mt-4">
           <Button
             variant="outline"
-            className="bg-white/90 text-red-500 hover:bg-white rounded-full p-3"
+            className={cn(
+              "rounded-full p-3",
+              theme === 'dark' 
+                ? "bg-gray-800/90 text-red-400 hover:bg-gray-700" 
+                : "bg-white/90 text-red-500 hover:bg-white"
+            )}
             onClick={handlePass}
           >
             <X size={24} strokeWidth={2.5} />
@@ -231,7 +248,12 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           
           <Button
             variant="outline"
-            className="bg-white/90 text-green-500 hover:bg-white rounded-full p-3"
+            className={cn(
+              "rounded-full p-3",
+              theme === 'dark' 
+                ? "bg-gray-800/90 text-green-400 hover:bg-gray-700" 
+                : "bg-white/90 text-green-500 hover:bg-white"
+            )}
             onClick={handleLike}
           >
             <Heart size={24} strokeWidth={2.5} />

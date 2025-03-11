@@ -21,7 +21,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
+        sans: ["Montserrat", "var(--font-sans)", ...fontFamily.sans],
         handwritten: ["Caveat", "cursive"],
       },
       colors: {

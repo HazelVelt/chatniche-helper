@@ -1,4 +1,3 @@
-
 /**
  * Utility for interacting with local Ollama models
  */
@@ -270,33 +269,95 @@ export const generateProfileImage = async (
 /**
  * Check if Stable Diffusion WebUI is available
  */
-export const checkStableDiffusionStatus = async (): Promise<{
-  isRunning: boolean;
-  availableModels: string[];
-}> => {
+export const checkStableDiffusionStatus = async () => {
   try {
     console.log("Checking Stable Diffusion WebUI status...");
-    const response = await fetch(`${SD_WEBUI_URL}/sd-models`);
     
+    // Attempt to connect to the Stable Diffusion WebUI API
+    const response = await fetch('http://127.0.0.1:7860/sdapi/v1/sd-models', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      // Short timeout to avoid hanging if the server is not available
+      signal: AbortSignal.timeout(5000),
+    });
+    
+    // If not successful, SD is not running
     if (!response.ok) {
-      console.error("SD WebUI response not OK:", await response.text());
       return {
         isRunning: false,
         availableModels: []
       };
     }
     
-    const data = await response.json();
-    console.log("SD WebUI available models:", data);
+    // Parse the models and return them
+    const modelsData = await response.json();
+    
+    // Extract model titles/names
+    const models = modelsData.map((model: any) => model.title || model.model_name);
+    
     return {
       isRunning: true,
-      availableModels: data.map((model: any) => model.title || model.model_name)
+      availableModels: models
     };
   } catch (error) {
-    console.error('Error checking Stable Diffusion WebUI status:', error);
+    console.error("Error checking Stable Diffusion WebUI status:", error);
     return {
       isRunning: false,
       availableModels: []
     };
+  }
+};
+
+/**
+ * Generate image using Stable Diffusion WebUI's txt2img API with options
+ */
+export const generateImageWithStableDiffusion = async (
+  prompt: string,
+  modelName?: string,
+  allowNsfw = false
+): Promise<string> => {
+  try {
+    console.log(`Generating image with prompt: ${prompt}`);
+    
+    // Create the API payload
+    const payload = {
+      prompt: prompt,
+      negative_prompt: allowNsfw ? "" : "nsfw, nudity, nude, naked, explicit content, pornography, sexual",
+      steps: 20,
+      width: 512,
+      height: 768,
+      cfg_scale: 7,
+      sampler_name: "Euler a",
+      model: modelName || "",  // If model is not specified, use the current one
+    };
+    
+    // Send the request to Stable Diffusion
+    const response = await fetch('http://127.0.0.1:7860/sdapi/v1/txt2img', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(60000), // 60 second timeout
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Stable Diffusion API returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Convert the base64 image to a data URL for display
+    if (data.images && data.images.length > 0) {
+      const imageBase64 = data.images[0];
+      return `data:image/png;base64,${imageBase64}`;
+    }
+    
+    throw new Error("No image was generated");
+  } catch (error) {
+    console.error("Error generating image with Stable Diffusion:", error);
+    throw error;
   }
 };

@@ -18,7 +18,8 @@ const Chat = () => {
     messageText,
     setMessageText,
     isLoading,
-    sendMessage
+    sendMessage,
+    removeMatch
   } = useChat();
   
   // Scroll to bottom of messages on new message
@@ -93,6 +94,7 @@ const Chat = () => {
         <ConversationList 
           conversations={conversations}
           onCreateNew={handleCreateNewChat}
+          onRemoveMatch={removeMatch}
         />
       </div>
       

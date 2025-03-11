@@ -1,7 +1,6 @@
-
-// This is a simulated version that checks for Ollama first, then falls back to faker if needed
+import { v4 as uuidv4 } from 'uuid';
+import { checkOllamaStatus, generateImageWithStableDiffusion } from './ollamaService';
 import { faker } from '@faker-js/faker';
-import { checkOllamaStatus, generateChatResponse, generateImage, checkStableDiffusionStatus } from './ollamaService';
 
 // Generate an AI profile
 export const generateAIProfile = async (modelName?: string) => {
@@ -79,7 +78,7 @@ export const generateAIProfile = async (modelName?: string) => {
   
   // Add this profile to matches so it appears in chat
   const profile = {
-    id: faker.string.uuid(),
+    id: uuidv4(),
     name: firstName,
     age,
     location: faker.location.city(),
@@ -173,90 +172,98 @@ const generateSimulatedBio = (interests: string[]) => {
 };
 
 // Generate an AI response for chat - uses Ollama if available
-export const generateAIResponse = async (message: string, modelName?: string): Promise<{text: string, image?: string}> => {
-  // Check if this is an image request
-  const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
-  
-  // Check if Ollama is available
+export const generateAIResponse = async (
+  message: string, 
+  model: string = 'llama3'
+): Promise<{ text?: string; image?: string }> => {
   try {
-    const status = await checkOllamaStatus();
-    console.log("Generating AI response. Ollama status:", status);
+    const isNsfwRequest = message.toLowerCase().includes('nsfw') || 
+                        message.toLowerCase().includes('nude') || 
+                        message.toLowerCase().includes('naked');
     
-    if (status.isRunning && status.llmAvailable) {
-      // Use specified model or fall back to the first available LLM model
-      const model = modelName || status.llmModel || status.availableModels.llm[0];
-      console.log("Using LLM model:", model);
-      return await generateChatResponse(message, model);
-    } else {
-      console.log("Ollama not available, falling back to simulated responses");
-    }
-  } catch (error) {
-    console.error('Error checking Ollama status:', error);
-  }
-  
-  // Simulate response delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // If it's an image request, generate both text and image
-  if (isImageRequest) {
-    try {
-      // Try Stable Diffusion for image generation first
-      const sdStatus = await checkStableDiffusionStatus();
-      if (sdStatus.isRunning) {
-        const prompt = "attractive young adult, dating profile photo, professional photography, natural lighting, smiling";
-        const imageData = await generateImage(prompt);
-        return {
-          text: "Here's a photo of me! What do you think? 😊",
-          image: imageData
-        };
-      } else {
-        // Fall back to Unsplash
-        const imageUrl = await getUnsplashImage(Math.random() > 0.5 ? 'female' : 'male');
-        return {
-          text: "Here's a photo of me! What do you think? 😊",
-          image: imageUrl
-        };
+    // Check if this is an image request
+    const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
+    
+    // For image requests, try to generate an image
+    if (isImageRequest) {
+      try {
+        // Try to check if SD is running
+        const sdStatus = await checkStableDiffusionStatus();
+        
+        if (sdStatus.isRunning) {
+          console.log("Using Stable Diffusion for image generation");
+          // Construct a good prompt for the image
+          let imagePrompt = `attractive person, ${message.replace(/what do you look like|can you show me|send me a pic of you|send a selfie|show me your body/gi, '')}`;
+          
+          if (imagePrompt.length < 20) {
+            imagePrompt = "attractive person, portrait photo, high quality, photorealistic";
+          }
+          
+          try {
+            const imageUrl = await generateImageWithStableDiffusion(
+              imagePrompt, 
+              undefined, // Use default model
+              isNsfwRequest // Allow NSFW if requested
+            );
+            
+            // Generate a text response
+            const textResponse = "Here's a picture of me. What do you think? 😊";
+            
+            return {
+              text: textResponse,
+              image: imageUrl
+            };
+          } catch (imageError) {
+            console.error("Error generating image with SD:", imageError);
+          }
+        }
+      } catch (sdCheckError) {
+        console.error("Failed to check SD status:", sdCheckError);
       }
-    } catch (error) {
-      console.error('Error fetching image:', error);
+      
+      // Fallback to text-only response if image generation fails
       return {
-        text: "I'd love to share a photo, but I'm having trouble with the image right now. Can we chat more first? 😊"
+        text: "I'd love to show you a picture, but I'm having trouble with my camera right now. Maybe you can send me one of you instead? 😊",
       };
     }
+    
+    // Text-only response
+    // Try to connect to Ollama
+    try {
+      const ollamaStatus = await checkOllamaStatus();
+      
+      if (ollamaStatus.isRunning && ollamaStatus.llmAvailable) {
+        // In a real app, this would call the Ollama API
+        // For now, return a mockup response
+      }
+    } catch (ollamaError) {
+      console.error("Failed to check Ollama status:", ollamaError);
+    }
+    
+    // Fallback response if Ollama is not available
+    // Generate a flirtatious response based on the message
+    let response = "";
+    
+    if (message.includes("hi") || message.includes("hello") || message.length < 10) {
+      response = "Hey there! So happy to hear from you! How's your day going? 😊";
+    } else if (message.includes("date") || message.includes("meet")) {
+      response = "I'd love to meet up sometime! What did you have in mind? I know some great spots around town 🍷";
+    } else if (message.includes("hobby") || message.includes("like to do")) {
+      response = "I love hiking, photography, and trying new restaurants. What about you? Maybe we could do something together? 📸";
+    } else if (isNsfwRequest) {
+      response = "I appreciate your interest! I'm a bit more reserved until I get to know someone better. Why don't we chat more first? Tell me more about yourself! 😉";
+    } else {
+      // Generic flirty response for anything else
+      response = "That's really interesting! I'm enjoying getting to know you. What else would you like to talk about? I'm pretty open-minded 😊";
+    }
+    
+    return { text: response };
+  } catch (error) {
+    console.error("Error generating AI response:", error);
+    return { 
+      text: "Sorry, I couldn't connect to the AI service right now. Let's chat later!" 
+    };
   }
-  
-  // Regular simulated response
-  const responses = [
-    "That's interesting! Tell me more about that.",
-    "I feel the same way! What else do you enjoy?",
-    "Thanks for sharing. I've been thinking about that too.",
-    "That's cool! I'd love to try that sometime.",
-    "Great question! I've been wondering about that myself.",
-    "I appreciate your perspective on that.",
-    "I hadn't thought about it that way before.",
-    "You make a good point! What else are you curious about?",
-    "I agree completely. What are your other thoughts on this?",
-    "That sounds amazing! I'd love to hear more."
-  ];
-  
-  // Add occasional questions to keep conversation flowing
-  const questions = [
-    "What do you like to do on weekends?",
-    "Have you seen any good movies lately?",
-    "What's your favorite place you've ever traveled to?",
-    "Do you have any fun plans coming up?",
-    "What's something you're looking forward to?",
-    "What's your ideal perfect day like?",
-    "If you could have dinner with anyone, who would it be?",
-    "What's something you've always wanted to learn?"
-  ];
-  
-  // 30% chance of asking a question
-  if (Math.random() < 0.3) {
-    return { text: questions[Math.floor(Math.random() * questions.length)] };
-  }
-  
-  return { text: responses[Math.floor(Math.random() * responses.length)] };
 };
 
 // Generate multiple profiles
