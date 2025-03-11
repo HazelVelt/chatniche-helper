@@ -12,6 +12,8 @@ interface SettingsContextType {
   setAvailableModels: (models: { llm: string[], stableDiffusion: string[] }) => void;
   useMockedServices: boolean;
   setUseMockedServices: (value: boolean) => void;
+  forceMockedImage: boolean;
+  setForceMockedImage: (value: boolean) => void;
 }
 
 const defaultSettings: ModelSettings = {
@@ -30,7 +32,9 @@ const SettingsContext = createContext<SettingsContextType>({
   availableModels: defaultAvailableModels,
   setAvailableModels: () => {},
   useMockedServices: false,
-  setUseMockedServices: () => {}
+  setUseMockedServices: () => {},
+  forceMockedImage: false,
+  setForceMockedImage: () => {}
 });
 
 export const useSettings = () => useContext(SettingsContext);
@@ -42,11 +46,19 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [availableModels, setAvailableModels] = useState(defaultAvailableModels);
-  const [useMockedServices, setUseMockedServices] = useState(false);
+  const [useMockedServices, setUseMockedServices] = useState(() => {
+    const saved = localStorage.getItem('useMockedServices');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [forceMockedImage, setForceMockedImage] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('modelSettings', JSON.stringify(modelSettings));
   }, [modelSettings]);
+  
+  useEffect(() => {
+    localStorage.setItem('useMockedServices', JSON.stringify(useMockedServices));
+  }, [useMockedServices]);
 
   const updateModelSettings = (settings: Partial<ModelSettings>) => {
     setModelSettings(prev => ({ ...prev, ...settings }));
@@ -59,7 +71,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       availableModels, 
       setAvailableModels,
       useMockedServices,
-      setUseMockedServices
+      setUseMockedServices,
+      forceMockedImage,
+      setForceMockedImage
     }}>
       {children}
     </SettingsContext.Provider>

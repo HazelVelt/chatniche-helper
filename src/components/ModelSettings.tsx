@@ -21,7 +21,9 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     availableModels, 
     setAvailableModels,
     useMockedServices,
-    setUseMockedServices
+    setUseMockedServices,
+    forceMockedImage,
+    setForceMockedImage
   } = useSettings();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -32,14 +34,27 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
   });
   
   useEffect(() => {
+    // Skip real service checks if in demo mode
+    if (useMockedServices) {
+      const demoModels = {
+        llm: ['llama3', 'mistral', 'phi'],
+        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+      };
+      setAvailableModels(demoModels);
+      setIsLoading(false);
+      return;
+    }
+    
     const fetchModels = async () => {
       setIsLoading(true);
       try {
         // Check Ollama for LLM models
         const ollamaStatus = await checkOllamaStatus();
+        console.log("Ollama status in settings:", ollamaStatus);
         
         // Check SD WebUI for SD models
         const sdStatus = await checkStableDiffusionStatus();
+        console.log("SD WebUI status in settings:", sdStatus);
         
         // Combine available models
         const combinedModels = {
@@ -76,7 +91,10 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
             return;
           }
         } else {
-          setUseMockedServices(false);
+          // Only disable mocked services if real services are detected
+          if (ollamaStatus.isRunning || sdStatus.isRunning) {
+            setUseMockedServices(false);
+          }
         }
         
         // If current models aren't in the available list, select the first ones
@@ -100,6 +118,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
           toast.warning("Stable Diffusion WebUI is not running. Please start it for image generation.");
         }
       } catch (error) {
+        console.error("Error fetching models:", error);
         toast.error("Failed to fetch available models");
       } finally {
         setIsLoading(false);
@@ -107,7 +126,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     };
     
     fetchModels();
-  }, [setAvailableModels, setUseMockedServices]);
+  }, [setAvailableModels, setUseMockedServices, useMockedServices]);
   
   const handleSave = () => {
     updateModelSettings(selectedSettings);
@@ -154,6 +173,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     }
   };
   
+  const toggleForceMockedImage = () => {
+    setForceMockedImage(!forceMockedImage);
+    toast.info(forceMockedImage ? 
+      "Will attempt to use real image generation when available" : 
+      "Will always use fallback images regardless of SD availability");
+  };
+  
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -164,9 +190,9 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
   }
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 dark:text-gray-100">
       {/* Demo Mode Toggle */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
+      <div className="flex items-center justify-between rounded-lg border p-4 dark:border-gray-700">
         <div className="space-y-0.5">
           <h4 className="font-medium">Demo Mode</h4>
           <p className="text-sm text-muted-foreground">
@@ -178,6 +204,21 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
           onCheckedChange={toggleDemoMode}
         />
       </div>
+      
+      {!useMockedServices && (
+        <div className="flex items-center justify-between rounded-lg border p-4 dark:border-gray-700">
+          <div className="space-y-0.5">
+            <h4 className="font-medium">Always Use Fallback Images</h4>
+            <p className="text-sm text-muted-foreground">
+              Skip real image generation and always use predefined images
+            </p>
+          </div>
+          <Switch
+            checked={forceMockedImage}
+            onCheckedChange={toggleForceMockedImage}
+          />
+        </div>
+      )}
       
       {useMockedServices && (
         <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-4 flex gap-2 items-start">
@@ -210,7 +251,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
             className="space-y-2"
           >
             {availableModels.llm.map(model => (
-              <div key={model} className="flex items-center space-x-2 rounded-md border p-3 hover:bg-secondary/50 transition-colors">
+              <div key={model} className="flex items-center space-x-2 rounded-md border p-3 hover:bg-secondary/50 transition-colors dark:border-gray-700">
                 <RadioGroupItem value={model} id={`llm-${model}`} />
                 <Label htmlFor={`llm-${model}`} className="flex-1 cursor-pointer">
                   {model}
@@ -241,7 +282,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
             className="space-y-2"
           >
             {availableModels.stableDiffusion.map(model => (
-              <div key={model} className="flex items-center space-x-2 rounded-md border p-3 hover:bg-secondary/50 transition-colors">
+              <div key={model} className="flex items-center space-x-2 rounded-md border p-3 hover:bg-secondary/50 transition-colors dark:border-gray-700">
                 <RadioGroupItem value={model} id={`sd-${model}`} />
                 <Label htmlFor={`sd-${model}`} className="flex-1 cursor-pointer">
                   {model}

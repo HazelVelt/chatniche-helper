@@ -26,7 +26,7 @@ export const checkOllamaStatus = async (): Promise<{
     // Check if base Ollama service is running
     const response = await fetch(`${OLLAMA_API_URL}/tags`, {
       method: 'GET',
-      signal: AbortSignal.timeout(3000), // 3 second timeout to avoid hanging
+      signal: AbortSignal.timeout(2000), // 2 second timeout to avoid hanging
     });
     
     if (!response.ok) {
@@ -115,7 +115,7 @@ export const generateChatResponse = async (
         system: systemPrompt,
         stream: false,
       }),
-      signal: AbortSignal.timeout(20000), // 20 seconds timeout
+      signal: AbortSignal.timeout(15000), // 15 seconds timeout
     });
     
     if (!response.ok) {
@@ -210,12 +210,13 @@ export const checkStableDiffusionStatus = async () => {
       headers: {
         'Accept': 'application/json',
       },
-      // Short timeout to avoid hanging if the server is not available
-      signal: AbortSignal.timeout(3000),
+      // Shorter timeout for checking status
+      signal: AbortSignal.timeout(2000),
     });
     
     // If not successful, SD is not running
     if (!response.ok) {
+      console.log("Stable Diffusion WebUI not responding");
       return {
         isRunning: false,
         availableModels: []
@@ -224,10 +225,12 @@ export const checkStableDiffusionStatus = async () => {
     
     // Parse the models and return them
     const modelsData = await response.json();
+    console.log("SD WebUI models:", modelsData);
     
     // Extract model titles/names
     const models = modelsData.map((model: any) => model.title || model.model_name);
     
+    console.log("Available SD models:", models);
     return {
       isRunning: true,
       availableModels: models
@@ -242,7 +245,7 @@ export const checkStableDiffusionStatus = async () => {
 };
 
 /**
- * Generate image using Stable Diffusion WebUI's txt2img API with options
+ * Generate image using Stable Diffusion WebUI's txt2img API
  */
 export const generateImageWithStableDiffusion = async (
   prompt: string,
@@ -252,7 +255,7 @@ export const generateImageWithStableDiffusion = async (
   try {
     console.log(`Generating image with prompt: ${prompt}`);
     
-    // Create the API payload with the format provided by the user
+    // Create the API payload - this is the exact format expected by Stable Diffusion WebUI
     const payload = {
       prompt: prompt,
       negative_prompt: allowNsfw ? "" : "nsfw, nudity, nude, naked, explicit content, pornography, sexual",
@@ -311,6 +314,8 @@ export const generateImageWithStableDiffusion = async (
       };
     }
     
+    console.log("Sending request to Stable Diffusion API:", JSON.stringify(payload).slice(0, 200) + "...");
+    
     // Send the request to Stable Diffusion
     const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {
       method: 'POST',
@@ -318,7 +323,7 @@ export const generateImageWithStableDiffusion = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(60000), // 60 second timeout
+      signal: AbortSignal.timeout(30000), // 30 second timeout
     });
     
     if (!response.ok) {
@@ -329,6 +334,7 @@ export const generateImageWithStableDiffusion = async (
     }
     
     const data = await response.json();
+    console.log("SD API response received, contains images:", !!data.images);
     
     // Convert the base64 image to a data URL for display
     if (data.images && data.images.length > 0) {

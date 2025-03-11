@@ -14,7 +14,7 @@ export const useChat = () => {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { modelSettings } = useSettings();
+  const { modelSettings, useMockedServices } = useSettings();
 
   // Load conversations and matches from localStorage
   useEffect(() => {
@@ -141,17 +141,26 @@ export const useChat = () => {
     
     setIsLoading(true);
     try {
+      console.log(`Sending message to AI: ${text}`);
+      console.log(`Using model: ${modelSettings.llmModel}, Mocked services: ${useMockedServices}`);
+      
       // Check if this is an image request
       const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(text.toLowerCase());
       
       const aiResponse = await generateAIResponse(text, modelSettings.llmModel);
+      console.log(`Received AI response:`, aiResponse);
       
       // Ensure we get an image for image requests
       if (isImageRequest && !aiResponse.image) {
+        console.log("Image request detected but no image was returned, trying again");
         // Explicitly prompt for NSFW content if requested
-        const imagePrompt = `Attractive ${currentConversation.matchName}, dating profile picture, photorealistic portrait, highly detailed, professional photography, ${text.includes('nsfw') ? 'nsfw content allowed' : ''}`;
-        const imageResponse = await generateAIResponse(imagePrompt, modelSettings.llmModel);
-        aiResponse.image = imageResponse.image;
+        try {
+          const imagePrompt = `Attractive ${currentConversation.matchName}, dating profile picture, photorealistic portrait, highly detailed, professional photography, ${text.includes('nsfw') ? 'nsfw content allowed' : ''}`;
+          const imageResponse = await generateAIResponse(imagePrompt, modelSettings.llmModel);
+          aiResponse.image = imageResponse.image;
+        } catch (imageError) {
+          console.error("Error getting image on second attempt:", imageError);
+        }
       }
       
       const matchMessage: Message = {
@@ -178,10 +187,32 @@ export const useChat = () => {
     } catch (error) {
       console.error('Error generating AI response:', error);
       toast.error('Error generating response. Please try again.');
+      
+      // Add a fallback message
+      const fallbackMessage: Message = {
+        id: uuidv4(),
+        sender: 'match',
+        text: "Sorry, I'm having trouble with my connection. Can we try again in a moment?",
+        timestamp: new Date()
+      };
+      
+      const conversationWithFallback = {
+        ...updatedConversation,
+        lastActive: new Date(),
+        messages: [...updatedConversation.messages, fallbackMessage]
+      };
+      
+      setConversations(prevConversations => 
+        prevConversations.map(conv => 
+          conv.id === currentConversation.id ? conversationWithFallback : conv
+        )
+      );
+      
+      setCurrentConversation(conversationWithFallback);
     } finally {
       setIsLoading(false);
     }
-  }, [currentConversation, setConversations, modelSettings.llmModel]);
+  }, [currentConversation, setConversations, modelSettings.llmModel, useMockedServices]);
 
   return {
     conversations,

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 const ModelStatus: React.FC = () => {
-  const { modelSettings, availableModels, setAvailableModels } = useSettings();
+  const { modelSettings, availableModels, setAvailableModels, useMockedServices, setUseMockedServices } = useSettings();
   const navigate = useNavigate();
   const [status, setStatus] = useState<{
     isRunning: boolean;
@@ -31,9 +31,27 @@ const ModelStatus: React.FC = () => {
   });
   
   const [isChecking, setIsChecking] = useState(false);
-  const [mockedStatus, setMockedStatus] = useState(false);
   
   const checkStatus = async () => {
+    if (useMockedServices) {
+      // If we're in mocked mode, just simulate everything is working
+      const demoModels = {
+        llm: ['llama3', 'mistral', 'phi'],
+        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+      };
+      
+      setStatus({
+        isRunning: true,
+        llmAvailable: true,
+        llmModel: 'llama3',
+        stableDiffusionAvailable: true,
+        availableModels: demoModels
+      });
+      
+      setAvailableModels(demoModels);
+      return;
+    }
+    
     setIsChecking(true);
     try {
       // Check Ollama status
@@ -41,6 +59,9 @@ const ModelStatus: React.FC = () => {
       
       // Check Stable Diffusion WebUI status separately
       const sdResult = await checkStableDiffusionStatus();
+      
+      console.log("Ollama status check result:", ollamaResult);
+      console.log("SD WebUI status check result:", sdResult);
       
       const combinedStatus = {
         ...ollamaResult,
@@ -53,16 +74,18 @@ const ModelStatus: React.FC = () => {
       
       setStatus(combinedStatus);
       setAvailableModels(combinedStatus.availableModels);
-      setMockedStatus(false);
       
-      if (!ollamaResult.isRunning) {
-        toast.error('Ollama is not running. Please start Ollama service.');
-      } else if (!sdResult.isRunning) {
-        toast.warning('Stable Diffusion WebUI is not running. Image generation will use fallbacks.');
-      } else if (combinedStatus.error) {
-        toast.warning(combinedStatus.error);
-      } else if (ollamaResult.llmAvailable && sdResult.isRunning) {
-        toast.success('All AI services are available and ready to use.');
+      // Only show warnings/errors if we're not in demo mode
+      if (!useMockedServices) {
+        if (!ollamaResult.isRunning) {
+          toast.error('Ollama is not running. Please start Ollama service or use demo mode.');
+        } else if (!sdResult.isRunning) {
+          toast.warning('Stable Diffusion WebUI is not running. Image generation will use fallbacks.');
+        } else if (combinedStatus.error) {
+          toast.warning(combinedStatus.error);
+        } else if (ollamaResult.llmAvailable && sdResult.isRunning) {
+          toast.success('All AI services are available and ready to use.');
+        }
       }
     } catch (error) {
       console.error('Failed to check services status:', error);
@@ -72,11 +95,14 @@ const ModelStatus: React.FC = () => {
     }
   };
   
-  // Mocked status for demo purposes - allows testing UI without local services running
-  const enableMockedServices = () => {
-    if (!status.isRunning && !status.stableDiffusionAvailable) {
-      setMockedStatus(true);
-      const mockedAvailableModels = {
+  // Toggle between real services and demo mode
+  const toggleDemoMode = () => {
+    const newModeValue = !useMockedServices;
+    setUseMockedServices(newModeValue);
+    
+    if (newModeValue) {
+      // If enabling demo mode
+      const demoModels = {
         llm: ['llama3', 'mistral', 'phi'],
         stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
       };
@@ -86,23 +112,24 @@ const ModelStatus: React.FC = () => {
         llmAvailable: true,
         llmModel: 'llama3',
         stableDiffusionAvailable: true,
-        availableModels: mockedAvailableModels
+        availableModels: demoModels
       });
       
-      setAvailableModels(mockedAvailableModels);
+      setAvailableModels(demoModels);
       toast.success('Using simulated AI services for demo purposes.');
     } else {
-      setMockedStatus(false);
+      // If disabling demo mode, check for real services
       checkStatus();
+      toast.info('Checking for real AI services...');
     }
   };
   
   useEffect(() => {
     checkStatus();
-    // Check status every 5 minutes
-    const interval = setInterval(checkStatus, 5 * 60 * 1000);
+    // Check status less frequently to avoid network issues
+    const interval = setInterval(checkStatus, 10 * 60 * 1000); // Every 10 minutes
     return () => clearInterval(interval);
-  }, []);
+  }, [useMockedServices]);
   
   const goToSettings = () => {
     navigate('/profile');
@@ -116,11 +143,16 @@ const ModelStatus: React.FC = () => {
   };
   
   return (
-    <div className="flex items-center px-4 py-2 border-t border-border">
+    <div className="flex items-center px-4 py-2 border-t border-border dark:bg-gray-900">
       <div className="flex flex-1 gap-4 items-center">
         <div className="flex items-center gap-1.5 text-xs">
           <span className="font-medium">Ollama:</span>
-          {status.isRunning ? (
+          {useMockedServices ? (
+            <span className="flex items-center gap-1 text-purple-500">
+              <CheckCircle size={14} />
+              Demo Mode
+            </span>
+          ) : status.isRunning ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
               Running
@@ -135,7 +167,13 @@ const ModelStatus: React.FC = () => {
         
         <div className="flex items-center gap-1.5 text-xs">
           <span className="font-medium">LLM:</span>
-          {status.llmAvailable ? (
+          {useMockedServices ? (
+            <span className="flex items-center gap-1 text-purple-500">
+              <CheckCircle size={14} />
+              <span className="hidden sm:inline">Simulated</span>
+              <span className="sm:hidden">Ready</span>
+            </span>
+          ) : status.llmAvailable ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
               <span className="hidden sm:inline">{modelSettings.llmModel}</span>
@@ -151,7 +189,13 @@ const ModelStatus: React.FC = () => {
         
         <div className="flex items-center gap-1.5 text-xs">
           <span className="font-medium">SD WebUI:</span>
-          {status.stableDiffusionAvailable ? (
+          {useMockedServices ? (
+            <span className="flex items-center gap-1 text-purple-500">
+              <CheckCircle size={14} />
+              <span className="hidden sm:inline">Simulated</span>
+              <span className="sm:hidden">Ready</span>
+            </span>
+          ) : status.stableDiffusionAvailable ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
               <span className="hidden sm:inline">{modelSettings.stableDiffusionModel}</span>
@@ -167,12 +211,19 @@ const ModelStatus: React.FC = () => {
       </div>
       
       <div className="flex items-center gap-3">
-        {!status.isRunning && !status.stableDiffusionAvailable && !mockedStatus ? (
+        {(!status.isRunning || !status.stableDiffusionAvailable) && !useMockedServices ? (
           <button 
-            onClick={enableMockedServices}
+            onClick={toggleDemoMode}
             className="text-xs text-amber-500 hover:text-amber-600 hover:underline"
           >
             Use demo mode
+          </button>
+        ) : useMockedServices ? (
+          <button 
+            onClick={toggleDemoMode}
+            className="text-xs text-purple-500 hover:text-purple-600 hover:underline"
+          >
+            Exit demo mode
           </button>
         ) : (
           <button 
