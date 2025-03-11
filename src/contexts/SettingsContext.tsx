@@ -50,7 +50,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const saved = localStorage.getItem('useMockedServices');
     return saved ? JSON.parse(saved) : false;
   });
-  const [forceMockedImage, setForceMockedImage] = useState(false);
+  const [forceMockedImage, setForceMockedImage] = useState(() => {
+    const saved = localStorage.getItem('forceMockedImage');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   useEffect(() => {
     localStorage.setItem('modelSettings', JSON.stringify(modelSettings));
@@ -59,6 +62,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     localStorage.setItem('useMockedServices', JSON.stringify(useMockedServices));
   }, [useMockedServices]);
+  
+  useEffect(() => {
+    localStorage.setItem('forceMockedImage', JSON.stringify(forceMockedImage));
+  }, [forceMockedImage]);
 
   const updateModelSettings = (settings: Partial<ModelSettings>) => {
     setModelSettings(prev => ({ ...prev, ...settings }));
@@ -79,3 +86,4 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     </SettingsContext.Provider>
   );
 };
+

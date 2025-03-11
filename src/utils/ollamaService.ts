@@ -26,7 +26,7 @@ export const checkOllamaStatus = async (): Promise<{
     // Check if base Ollama service is running
     const response = await fetch(`${OLLAMA_API_URL}/tags`, {
       method: 'GET',
-      signal: AbortSignal.timeout(2000), // 2 second timeout to avoid hanging
+      signal: AbortSignal.timeout(3000), // 3 second timeout to avoid hanging
     });
     
     if (!response.ok) {
@@ -211,7 +211,7 @@ export const checkStableDiffusionStatus = async () => {
         'Accept': 'application/json',
       },
       // Shorter timeout for checking status
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(5000),
     });
     
     // If not successful, SD is not running
@@ -255,7 +255,7 @@ export const generateImageWithStableDiffusion = async (
   try {
     console.log(`Generating image with prompt: ${prompt}`);
     
-    // Create the API payload - this is the exact format expected by Stable Diffusion WebUI
+    // Create the API payload for Stability Matrix (A1111 WebUI)
     const payload = {
       prompt: prompt,
       negative_prompt: allowNsfw ? "" : "nsfw, nudity, nude, naked, explicit content, pornography, sexual",
@@ -269,7 +269,7 @@ export const generateImageWithStableDiffusion = async (
       scheduler: "",
       batch_size: 1,
       n_iter: 1,
-      steps: 30,
+      steps: 50,
       cfg_scale: 7,
       width: 512,
       height: 768,
@@ -323,7 +323,7 @@ export const generateImageWithStableDiffusion = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(30000), // 30 second timeout
+      signal: AbortSignal.timeout(60000), // 60 second timeout - image generation can take time
     });
     
     if (!response.ok) {
@@ -346,15 +346,23 @@ export const generateImageWithStableDiffusion = async (
   } catch (error) {
     console.error("Error generating image with Stable Diffusion:", error);
     
-    // Fallback to Unsplash if SD WebUI fails
+    // Fallback to a placeholder image if SD WebUI fails
     try {
-      console.log("Falling back to Unsplash for image");
-      const gender = Math.random() > 0.5 ? 'woman' : 'man';
-      const category = ['portrait', 'person', 'model', 'fashion'][Math.floor(Math.random() * 4)];
-      const response = await fetch(`https://source.unsplash.com/featured/768x1024/?${category},${gender}`);
+      console.log("Using placeholder image fallback");
+      // Use placeholder images when Unsplash fails
+      const placeholderImages = [
+        "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg",
+        "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg",
+        "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg",
+        "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg",
+        "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg"
+      ];
+      
+      const randomPlaceholder = placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
+      const response = await fetch(randomPlaceholder);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch from Unsplash');
+        throw new Error('Failed to fetch placeholder image');
       }
       
       const blob = await response.blob();
@@ -369,8 +377,10 @@ export const generateImageWithStableDiffusion = async (
         reader.readAsDataURL(blob);
       });
     } catch (fallbackError) {
-      console.error('Fallback image fetch failed:', fallbackError);
-      throw error; // Throw the original error
+      console.error('All image fallbacks failed:', fallbackError);
+      // Return a base64 encoded empty transparent image as last resort
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
     }
   }
 };
+

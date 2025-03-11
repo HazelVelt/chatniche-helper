@@ -7,7 +7,6 @@ import {
   generateChatResponse 
 } from './ollamaService';
 import { faker } from '@faker-js/faker';
-import { useSettings } from '@/contexts/SettingsContext';
 
 // Generate an AI profile
 export const generateAIProfile = async (modelName?: string) => {
@@ -17,7 +16,7 @@ export const generateAIProfile = async (modelName?: string) => {
     const useMocked = settingsFromStorage ? JSON.parse(settingsFromStorage) : false;
     
     // Only check real services if not using mocked mode
-    let ollamaStatus = { isRunning: false, llmAvailable: false, stableDiffusionAvailable: false };
+    let ollamaStatus = { isRunning: false, llmAvailable: false, llmModel: '', stableDiffusionAvailable: false };
     let sdStatus = { isRunning: false, availableModels: [] };
     
     if (!useMocked) {
@@ -60,7 +59,7 @@ export const generateAIProfile = async (modelName?: string) => {
       try {
         const bioPrompt = `Generate a short dating app bio for a ${age} year old ${gender} named ${firstName} who likes ${interests.join(', ')}. Keep it under 150 characters.`;
         const bioResponse = await generateChatResponse(bioPrompt, ollamaStatus.llmModel);
-        bio = bioResponse.text;
+        bio = bioResponse.text || "";
       } catch (error) {
         console.error("Error generating bio with Ollama:", error);
         // Fall back to simulated bio
@@ -86,12 +85,12 @@ export const generateAIProfile = async (modelName?: string) => {
         }
       } catch (error) {
         console.error('Error generating image with Stable Diffusion:', error);
-        // Fall back to Unsplash
-        imageUrl = await getUnsplashImage(gender);
+        // Fall back to placeholder
+        imageUrl = await getPlaceholderImage(gender);
       }
     } else {
-      // Fallback to Unsplash image
-      imageUrl = await getUnsplashImage(gender);
+      // Fallback to placeholder image
+      imageUrl = await getPlaceholderImage(gender);
     }
     
     // Add this profile to matches so it appears in chat
@@ -119,7 +118,7 @@ export const generateAIProfile = async (modelName?: string) => {
       age: 25,
       location: "Unknown",
       bio: "Hi there! I'm having some trouble with my profile right now, but I'd love to chat!",
-      image: "https://source.unsplash.com/featured/768x1024/?portrait",
+      image: "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg",
       interests: ["Chat"],
       lastActive: new Date(),
     };
@@ -158,15 +157,26 @@ const saveMatchToLocalStorage = (match: any) => {
   }
 };
 
-// Get an image from Unsplash
-const getUnsplashImage = async (gender: string): Promise<string> => {
+// Get a placeholder image
+const getPlaceholderImage = async (gender: string): Promise<string> => {
   try {
-    const categories = ['person', 'portrait', 'fashion', 'model'];
-    const category = categories[Math.floor(Math.random() * categories.length)];
-    const genderParam = gender === 'female' ? 'woman' : 'man';
-    const unsplashUrl = `https://source.unsplash.com/featured/800x1000/?${category},${genderParam}`;
+    // Use placeholder images since Unsplash isn't working
+    const femaleImages = [
+      "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg",
+      "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg",
+      "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg"
+    ];
     
-    const response = await fetch(unsplashUrl);
+    const maleImages = [
+      "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg",
+      "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg",
+      "https://images.pexels.com/photos/697509/pexels-photo-697509.jpeg"
+    ];
+    
+    const imagesArray = gender === 'female' ? femaleImages : maleImages;
+    const randomImage = imagesArray[Math.floor(Math.random() * imagesArray.length)];
+    
+    const response = await fetch(randomImage);
     const blob = await response.blob();
     
     return new Promise((resolve, reject) => {
@@ -176,8 +186,8 @@ const getUnsplashImage = async (gender: string): Promise<string> => {
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error('Error fetching Unsplash image:', error);
-    return 'https://source.unsplash.com/featured/800x1000/?person';
+    console.error('Error fetching placeholder image:', error);
+    return 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg';
   }
 };
 
@@ -215,22 +225,25 @@ export const generateAIResponse = async (
     
     // Check if we should use mocked services
     const settingsFromStorage = localStorage.getItem('useMockedServices');
+    const forceMockedImageStorage = localStorage.getItem('forceMockedImage');
     const useMocked = settingsFromStorage ? JSON.parse(settingsFromStorage) : false;
+    const forceMockedImage = forceMockedImageStorage ? JSON.parse(forceMockedImageStorage) : false;
     
     const isNsfwRequest = message.toLowerCase().includes('nsfw') || 
-                        message.toLowerCase().includes('nude') || 
-                        message.toLowerCase().includes('naked');
+                          message.toLowerCase().includes('nude') || 
+                          message.toLowerCase().includes('naked');
     
     // Check if this is an image request
     const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
     
-    // If we're using mocked mode or if this is an image request, handle it specially
+    // If this is an image request, handle it separately to prioritize image generation
     if (isImageRequest) {
       console.log("Detected image request:", message);
       
-      if (!useMocked) {
+      // If not using mocked services or not forcing mocked images, try real SD
+      if (!useMocked && !forceMockedImage) {
         try {
-          // Try to check if SD is running
+          // Check if SD is running
           const sdStatus = await checkStableDiffusionStatus();
           
           if (sdStatus.isRunning) {
@@ -260,45 +273,45 @@ export const generateAIResponse = async (
               };
             } catch (imageError) {
               console.error("Error generating image with SD:", imageError);
-              // Fall back to Unsplash for image
+              // Fall back to placeholder
               const gender = Math.random() > 0.5 ? 'female' : 'male';
-              const unsplashImage = await getUnsplashImage(gender);
+              const placeholderImage = await getPlaceholderImage(gender);
               
               return {
                 text: "Here's a picture I took recently. What do you think? 😊",
-                image: unsplashImage
+                image: placeholderImage
               };
             }
           } else {
-            console.log("Stable Diffusion not available, using Unsplash");
+            console.log("Stable Diffusion not available, using placeholder");
             const gender = Math.random() > 0.5 ? 'female' : 'male';
-            const unsplashImage = await getUnsplashImage(gender);
+            const placeholderImage = await getPlaceholderImage(gender);
             
             return {
               text: "Here's a picture I took recently. What do you think? 😊",
-              image: unsplashImage
+              image: placeholderImage
             };
           }
         } catch (sdCheckError) {
           console.error("Failed to check SD status:", sdCheckError);
-          // Fall back to Unsplash
+          // Fall back to placeholder
           const gender = Math.random() > 0.5 ? 'female' : 'male';
-          const unsplashImage = await getUnsplashImage(gender);
+          const placeholderImage = await getPlaceholderImage(gender);
           
           return {
             text: "Here's a picture I took recently. What do you think? 😊",
-            image: unsplashImage
+            image: placeholderImage
           };
         }
       } else {
-        // In mocked mode, always use Unsplash
-        console.log("Using mocked image (Unsplash) for image request");
+        // In mocked mode or forced mocked image, use placeholder
+        console.log("Using placeholder image for image request");
         const gender = Math.random() > 0.5 ? 'female' : 'male';
-        const unsplashImage = await getUnsplashImage(gender);
+        const placeholderImage = await getPlaceholderImage(gender);
         
         return {
           text: "Here's a picture I took recently. What do you think? 😊",
-          image: unsplashImage
+          image: placeholderImage
         };
       }
     }
@@ -360,3 +373,4 @@ export const generateMultipleProfiles = async (count: number, sdModel?: string) 
   }
   return profiles;
 };
+

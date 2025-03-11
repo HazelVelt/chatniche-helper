@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { checkOllamaStatus, checkStableDiffusionStatus } from '@/utils/ollamaService';
 import { useSettings } from '@/contexts/SettingsContext';
-import { AlertTriangle, CheckCircle, XCircle, Settings2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Settings2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,14 +54,14 @@ const ModelStatus: React.FC = () => {
     
     setIsChecking(true);
     try {
+      // Check Stable Diffusion WebUI status first and more aggressively
+      console.log("Checking SD WebUI status first...");
+      const sdResult = await checkStableDiffusionStatus();
+      console.log("SD WebUI status check result:", sdResult);
+      
       // Check Ollama status
       const ollamaResult = await checkOllamaStatus();
-      
-      // Check Stable Diffusion WebUI status separately
-      const sdResult = await checkStableDiffusionStatus();
-      
       console.log("Ollama status check result:", ollamaResult);
-      console.log("SD WebUI status check result:", sdResult);
       
       const combinedStatus = {
         ...ollamaResult,
@@ -126,8 +126,8 @@ const ModelStatus: React.FC = () => {
   
   useEffect(() => {
     checkStatus();
-    // Check status less frequently to avoid network issues
-    const interval = setInterval(checkStatus, 10 * 60 * 1000); // Every 10 minutes
+    // Check status frequently to catch if services come online
+    const interval = setInterval(checkStatus, 30 * 1000); // Every 30 seconds
     return () => clearInterval(interval);
   }, [useMockedServices]);
   
@@ -229,9 +229,19 @@ const ModelStatus: React.FC = () => {
           <button 
             onClick={checkStatus}
             disabled={isChecking}
-            className="text-xs text-primary hover:underline"
+            className="text-xs flex items-center gap-1 text-primary hover:underline"
           >
-            {isChecking ? 'Checking...' : 'Check again'}
+            {isChecking ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCw size={14} />
+                Check again
+              </>
+            )}
           </button>
         )}
         
@@ -248,3 +258,4 @@ const ModelStatus: React.FC = () => {
 };
 
 export default ModelStatus;
+
