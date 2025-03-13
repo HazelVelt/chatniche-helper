@@ -14,16 +14,26 @@ interface SettingsContextType {
   setUseMockedServices: (value: boolean) => void;
   forceMockedImage: boolean;
   setForceMockedImage: (value: boolean) => void;
+  sdModelsPaths: {
+    sd15: string;
+    sdxl: string;
+  };
+  setSdModelsPaths: (paths: { sd15: string; sdxl: string }) => void;
 }
 
 const defaultSettings: ModelSettings = {
   llmModel: 'llama3',
-  stableDiffusionModel: 'sd'
+  stableDiffusionModel: 'sd_15'
 };
 
 const defaultAvailableModels = {
   llm: ['llama3'],
-  stableDiffusion: ['sd']
+  stableDiffusion: ['sd_15']
+};
+
+const defaultSdModelsPaths = {
+  sd15: './models/sd15',
+  sdxl: './models/sdxl'
 };
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -34,7 +44,9 @@ const SettingsContext = createContext<SettingsContextType>({
   useMockedServices: false,
   setUseMockedServices: () => {},
   forceMockedImage: false,
-  setForceMockedImage: () => {}
+  setForceMockedImage: () => {},
+  sdModelsPaths: defaultSdModelsPaths,
+  setSdModelsPaths: () => {}
 });
 
 export const useSettings = () => useContext(SettingsContext);
@@ -54,6 +66,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const saved = localStorage.getItem('forceMockedImage');
     return saved ? JSON.parse(saved) : false;
   });
+  const [sdModelsPaths, setSdModelsPaths] = useState(() => {
+    const saved = localStorage.getItem('sdModelsPaths');
+    return saved ? JSON.parse(saved) : defaultSdModelsPaths;
+  });
 
   useEffect(() => {
     localStorage.setItem('modelSettings', JSON.stringify(modelSettings));
@@ -66,6 +82,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     localStorage.setItem('forceMockedImage', JSON.stringify(forceMockedImage));
   }, [forceMockedImage]);
+  
+  useEffect(() => {
+    localStorage.setItem('sdModelsPaths', JSON.stringify(sdModelsPaths));
+  }, [sdModelsPaths]);
 
   const updateModelSettings = (settings: Partial<ModelSettings>) => {
     setModelSettings(prev => ({ ...prev, ...settings }));
@@ -80,10 +100,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       useMockedServices,
       setUseMockedServices,
       forceMockedImage,
-      setForceMockedImage
+      setForceMockedImage,
+      sdModelsPaths,
+      setSdModelsPaths
     }}>
       {children}
     </SettingsContext.Provider>
   );
 };
-

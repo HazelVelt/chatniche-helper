@@ -4,7 +4,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/contexts/SettingsContext';
-import { checkOllamaStatus, checkStableDiffusionStatus } from '@/utils/ollamaService';
+import { checkOllamaStatus } from '@/utils/ollamaService';
+import { checkSdkitStatus } from '@/utils/sdkitService';
 import { toast } from 'sonner';
 import { Loader2, BadgeAlert } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -23,7 +24,9 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     useMockedServices,
     setUseMockedServices,
     forceMockedImage,
-    setForceMockedImage
+    setForceMockedImage,
+    sdModelsPaths,
+    setSdModelsPaths
   } = useSettings();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -33,12 +36,17 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     stableDiffusionModel: modelSettings.stableDiffusionModel
   });
   
+  const [modelPaths, setModelPaths] = useState({
+    sd15: sdModelsPaths.sd15,
+    sdxl: sdModelsPaths.sdxl
+  });
+  
   useEffect(() => {
     // Skip real service checks if in demo mode
     if (useMockedServices) {
       const demoModels = {
         llm: ['llama3', 'mistral', 'phi'],
-        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+        stableDiffusion: ['sd_15', 'sdxl_base', 'realisticVision']
       };
       setAvailableModels(demoModels);
       setIsLoading(false);
@@ -52,9 +60,9 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
         const ollamaStatus = await checkOllamaStatus();
         console.log("Ollama status in settings:", ollamaStatus);
         
-        // Check SD WebUI for SD models
-        const sdStatus = await checkStableDiffusionStatus();
-        console.log("SD WebUI status in settings:", sdStatus);
+        // Check SDKit for SD models
+        const sdStatus = await checkSdkitStatus();
+        console.log("SDKit status in settings:", sdStatus);
         
         // Combine available models
         const combinedModels = {
@@ -76,7 +84,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
             setUseMockedServices(true);
             const demoModels = {
               llm: ['llama3', 'mistral', 'phi'],
-              stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+              stableDiffusion: ['sd_15', 'sdxl_base', 'realisticVision']
             };
             setAvailableModels(demoModels);
             toast.success("Demo mode enabled. AI responses will be simulated.");
@@ -115,7 +123,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
         }
         
         if (!sdStatus.isRunning) {
-          toast.warning("Stable Diffusion WebUI is not running. Please start it for image generation.");
+          toast.warning("SDKit is not running. Please start it for image generation.");
         }
       } catch (error) {
         console.error("Error fetching models:", error);
@@ -130,6 +138,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
   
   const handleSave = () => {
     updateModelSettings(selectedSettings);
+    setSdModelsPaths(modelPaths);
     toast.success("Model settings saved successfully");
     onSave();
   };
@@ -138,7 +147,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
     if (!useMockedServices) {
       const demoModels = {
         llm: ['llama3', 'mistral', 'phi'],
-        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+        stableDiffusion: ['sd_15', 'sdxl_base', 'realisticVision']
       };
       setAvailableModels(demoModels);
       setSelectedSettings({
@@ -156,7 +165,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
         const fetchRealModels = async () => {
           try {
             const ollamaStatus = await checkOllamaStatus();
-            const sdStatus = await checkStableDiffusionStatus();
+            const sdStatus = await checkSdkitStatus();
             
             setAvailableModels({
               llm: ollamaStatus.availableModels.llm,
@@ -226,7 +235,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
           <p className="text-sm text-amber-800 dark:text-amber-200">
             Demo mode is enabled. AI services are being simulated and responses are pre-generated.
             For full functionality with real AI models, disable demo mode and make sure Ollama and 
-            Stable Diffusion WebUI are running.
+            SDKit are running.
           </p>
         </div>
       )}
@@ -264,7 +273,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
       
       {/* Stable Diffusion Model Selection */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Stable Diffusion Model</h3>
+        <h3 className="text-lg font-medium">SDKit Model</h3>
         <p className="text-sm text-muted-foreground">
           Select which image generation model to use for creating profile images
         </p>
@@ -272,7 +281,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
         {availableModels.stableDiffusion.length === 0 ? (
           <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-4">
             <p className="text-amber-800 dark:text-amber-200">
-              No Stable Diffusion models found. Please start the Stable Diffusion WebUI or enable demo mode.
+              No SDKit models found. Please start the SDKit server or enable demo mode.
             </p>
           </div>
         ) : (
@@ -291,6 +300,44 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onCancel, onSave }) => {
             ))}
           </RadioGroup>
         )}
+      </div>
+      
+      {/* SD Models Path Configuration */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Models Folder Paths</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure where SDKit should look for SD1.5 and SDXL models
+        </p>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="sd15-path" className="block text-sm font-medium mb-1">
+              SD1.5 Models Path
+            </Label>
+            <input
+              id="sd15-path"
+              type="text"
+              value={modelPaths.sd15}
+              onChange={(e) => setModelPaths(prev => ({ ...prev, sd15: e.target.value }))}
+              className="w-full p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="./models/sd15"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="sdxl-path" className="block text-sm font-medium mb-1">
+              SDXL Models Path
+            </Label>
+            <input
+              id="sdxl-path"
+              type="text"
+              value={modelPaths.sdxl}
+              onChange={(e) => setModelPaths(prev => ({ ...prev, sdxl: e.target.value }))}
+              className="w-full p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="./models/sdxl"
+            />
+          </div>
+        </div>
       </div>
       
       {/* Actions */}

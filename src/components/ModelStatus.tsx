@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { checkOllamaStatus, checkStableDiffusionStatus } from '@/utils/ollamaService';
+import { checkOllamaStatus } from '@/utils/ollamaService';
+import { checkSdkitStatus } from '@/utils/sdkitService';
 import { useSettings } from '@/contexts/SettingsContext';
 import { AlertTriangle, CheckCircle, XCircle, Settings2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,7 +14,7 @@ const ModelStatus: React.FC = () => {
     isRunning: boolean;
     llmAvailable: boolean;
     llmModel: string;
-    stableDiffusionAvailable: boolean;
+    sdkitAvailable: boolean;
     availableModels: {
       llm: string[];
       stableDiffusion: string[];
@@ -23,7 +24,7 @@ const ModelStatus: React.FC = () => {
     isRunning: false,
     llmAvailable: false,
     llmModel: '',
-    stableDiffusionAvailable: false,
+    sdkitAvailable: false,
     availableModels: {
       llm: [],
       stableDiffusion: []
@@ -37,14 +38,14 @@ const ModelStatus: React.FC = () => {
       // If we're in mocked mode, just simulate everything is working
       const demoModels = {
         llm: ['llama3', 'mistral', 'phi'],
-        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+        stableDiffusion: ['sd_15', 'sdxl_base', 'realisticVision']
       };
       
       setStatus({
         isRunning: true,
         llmAvailable: true,
         llmModel: 'llama3',
-        stableDiffusionAvailable: true,
+        sdkitAvailable: true,
         availableModels: demoModels
       });
       
@@ -54,10 +55,10 @@ const ModelStatus: React.FC = () => {
     
     setIsChecking(true);
     try {
-      // Check Stable Diffusion WebUI status first and more aggressively
-      console.log("Checking SD WebUI status first...");
-      const sdResult = await checkStableDiffusionStatus();
-      console.log("SD WebUI status check result:", sdResult);
+      // Check SDKit status first
+      console.log("Checking SDKit status first...");
+      const sdResult = await checkSdkitStatus();
+      console.log("SDKit status check result:", sdResult);
       
       // Check Ollama status
       const ollamaResult = await checkOllamaStatus();
@@ -65,7 +66,7 @@ const ModelStatus: React.FC = () => {
       
       const combinedStatus = {
         ...ollamaResult,
-        stableDiffusionAvailable: sdResult.isRunning,
+        sdkitAvailable: sdResult.isRunning,
         availableModels: {
           llm: ollamaResult.availableModels.llm,
           stableDiffusion: sdResult.availableModels
@@ -80,7 +81,7 @@ const ModelStatus: React.FC = () => {
         if (!ollamaResult.isRunning) {
           toast.error('Ollama is not running. Please start Ollama service or use demo mode.');
         } else if (!sdResult.isRunning) {
-          toast.warning('Stable Diffusion WebUI is not running. Image generation will use fallbacks.');
+          toast.warning('SDKit is not running. Image generation will use fallbacks.');
         } else if (combinedStatus.error) {
           toast.warning(combinedStatus.error);
         } else if (ollamaResult.llmAvailable && sdResult.isRunning) {
@@ -104,14 +105,14 @@ const ModelStatus: React.FC = () => {
       // If enabling demo mode
       const demoModels = {
         llm: ['llama3', 'mistral', 'phi'],
-        stableDiffusion: ['sd_xl_base_1.0', 'realisticVision']
+        stableDiffusion: ['sd_15', 'sdxl_base', 'realisticVision']
       };
       
       setStatus({
         isRunning: true,
         llmAvailable: true,
         llmModel: 'llama3',
-        stableDiffusionAvailable: true,
+        sdkitAvailable: true,
         availableModels: demoModels
       });
       
@@ -188,14 +189,14 @@ const ModelStatus: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="font-medium">SD WebUI:</span>
+          <span className="font-medium">SDKit:</span>
           {useMockedServices ? (
             <span className="flex items-center gap-1 text-purple-500">
               <CheckCircle size={14} />
               <span className="hidden sm:inline">Simulated</span>
               <span className="sm:hidden">Ready</span>
             </span>
-          ) : status.stableDiffusionAvailable ? (
+          ) : status.sdkitAvailable ? (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle size={14} />
               <span className="hidden sm:inline">{modelSettings.stableDiffusionModel}</span>
@@ -211,7 +212,7 @@ const ModelStatus: React.FC = () => {
       </div>
       
       <div className="flex items-center gap-3">
-        {(!status.isRunning || !status.stableDiffusionAvailable) && !useMockedServices ? (
+        {(!status.isRunning || !status.sdkitAvailable) && !useMockedServices ? (
           <button 
             onClick={toggleDemoMode}
             className="text-xs text-amber-500 hover:text-amber-600 hover:underline"
@@ -258,4 +259,3 @@ const ModelStatus: React.FC = () => {
 };
 
 export default ModelStatus;
-

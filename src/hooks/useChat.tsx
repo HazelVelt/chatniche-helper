@@ -89,29 +89,37 @@ export const useChat = () => {
     return conversations.find(conv => conv.id === match.id);
   }, [conversations]);
 
-  // Remove a match from conversations and matches list
+  // Remove a match from conversations and matches list - now faster with optimistic updates
   const removeMatch = useCallback((matchId: string) => {
-    // Remove from conversations
+    // Optimistically update UI immediately
     setConversations(prev => prev.filter(conv => conv.id !== matchId));
     
-    // Remove from matches in localStorage
-    const matches = JSON.parse(localStorage.getItem('matches') || '[]');
-    const updatedMatches = matches.filter((match: Match) => match.id !== matchId);
-    localStorage.setItem('matches', JSON.stringify(updatedMatches));
-    
-    // Navigate to another conversation if current one is removed
+    // Find the next conversation to navigate to if needed
     if (currentConversation?.id === matchId) {
-      if (conversations.length > 1) {
-        const nextConversation = conversations.find(conv => conv.id !== matchId);
-        if (nextConversation) {
-          navigate(`/chat/${nextConversation.id}`);
-        }
+      const nextConversation = conversations.find(conv => conv.id !== matchId);
+      if (nextConversation) {
+        navigate(`/chat/${nextConversation.id}`);
       } else {
         navigate('/chat');
       }
     }
     
-    toast.success("Match removed successfully");
+    // Background task to remove from localStorage
+    setTimeout(() => {
+      // Remove from matches in localStorage
+      const matches = JSON.parse(localStorage.getItem('matches') || '[]');
+      const updatedMatches = matches.filter((match: Match) => match.id !== matchId);
+      localStorage.setItem('matches', JSON.stringify(updatedMatches));
+      
+      // Also update conversations in localStorage
+      localStorage.setItem('conversations', JSON.stringify(
+        JSON.parse(localStorage.getItem('conversations') || '[]').filter(
+          (conv: any) => conv.id !== matchId
+        )
+      ));
+      
+      toast.success("Match removed successfully");
+    }, 0);
   }, [conversations, currentConversation, navigate]);
 
   const sendMessage = useCallback(async (text: string) => {
