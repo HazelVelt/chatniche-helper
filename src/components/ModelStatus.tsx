@@ -127,8 +127,8 @@ const ModelStatus: React.FC = () => {
   
   useEffect(() => {
     checkStatus();
-    // Check status frequently to catch if services come online
-    const interval = setInterval(checkStatus, 30 * 1000); // Every 30 seconds
+    // Check status every 30 seconds to catch if services come online
+    const interval = setInterval(checkStatus, 30 * 1000);
     return () => clearInterval(interval);
   }, [useMockedServices]);
   

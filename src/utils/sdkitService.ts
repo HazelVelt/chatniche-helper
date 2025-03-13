@@ -88,8 +88,8 @@ export const generateImageWithSdkit = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
-      // Set timeout to 30 seconds for image generation
-      signal: AbortSignal.timeout(30000)
+      // Set timeout to 60 seconds for image generation
+      signal: AbortSignal.timeout(60000)
     });
     
     if (!response.ok) {
@@ -112,28 +112,58 @@ export const generateImageWithSdkit = async (
   }
 };
 
-// Install model in SDKit
-export const installSdkitModel = async (modelName: string, modelType: 'sd15' | 'sdxl'): Promise<boolean> => {
+// Initialize SDKit with model paths
+export const initializeSdkit = async (
+  sd15Path: string,
+  sdxlPath: string
+): Promise<boolean> => {
   try {
-    const response = await fetch('http://127.0.0.1:8000/install-model', {
+    const response = await fetch('http://127.0.0.1:8000/initialize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model_name: modelName,
-        model_type: modelType
+        model_paths: {
+          sd15: sd15Path,
+          sdxl: sdxlPath
+        }
       }),
-      signal: AbortSignal.timeout(60000) // 1 minute timeout for model installation
+      signal: AbortSignal.timeout(10000) // 10 second timeout
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to install model: ${response.statusText}`);
+      throw new Error(`Failed to initialize SDKit: ${response.statusText}`);
     }
     
     return true;
   } catch (error) {
-    console.error("Error installing model:", error);
+    console.error("Error initializing SDKit:", error);
+    return false;
+  }
+};
+
+// Load a specific model in SDKit
+export const loadSdkitModel = async (modelType: 'sd15' | 'sdxl'): Promise<boolean> => {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/load-model', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model_type: modelType
+      }),
+      signal: AbortSignal.timeout(30000) // 30 second timeout for model loading
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load model: ${response.statusText}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error loading model:", error);
     return false;
   }
 };

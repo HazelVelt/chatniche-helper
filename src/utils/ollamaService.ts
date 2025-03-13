@@ -5,8 +5,8 @@
 
 // Default URL for Ollama API
 const OLLAMA_API_URL = 'http://localhost:11434/api';
-// Default URL for Stable Diffusion WebUI (Automatic1111)
-const SD_WEBUI_URL = 'http://127.0.0.1:7860/sdapi/v1';
+import { generateImageWithSdkit, checkSdkitStatus } from './sdkitService';
+import { useSettings } from '@/contexts/SettingsContext';
 
 /**
  * Check if Ollama service is running and required models are available
@@ -50,8 +50,8 @@ export const checkOllamaStatus = async (): Promise<{
     
     const llmModel = llmModels.length > 0 ? llmModels[0] : '';
     
-    // Check if SD WebUI is available
-    const sdStatus = await checkStableDiffusionStatus();
+    // Check if SDKit is available
+    const sdStatus = await checkSdkitStatus();
     
     return {
       isRunning: true,
@@ -63,13 +63,13 @@ export const checkOllamaStatus = async (): Promise<{
         stableDiffusion: sdStatus.availableModels
       },
       error: (!llmModels.length || !sdStatus.isRunning) ? 
-        `Required services missing: ${!llmModels.length ? 'LLM' : ''}${(!llmModels.length && !sdStatus.isRunning) ? ', ' : ''}${!sdStatus.isRunning ? 'Stable Diffusion WebUI' : ''}` : 
+        `Required services missing: ${!llmModels.length ? 'LLM' : ''}${(!llmModels.length && !sdStatus.isRunning) ? ', ' : ''}${!sdStatus.isRunning ? 'SDKit' : ''}` : 
         undefined
     };
   } catch (error) {
     console.error('Error checking Ollama status:', error);
     // Try to check SD status separately
-    const sdStatus = await checkStableDiffusionStatus().catch(() => ({
+    const sdStatus = await checkSdkitStatus().catch(() => ({
       isRunning: false,
       availableModels: []
     }));
@@ -132,7 +132,7 @@ export const generateChatResponse = async (
       const [text, imagePrompt] = aiResponse.split('IMAGE_REQUEST:');
       console.log("Image prompt detected:", imagePrompt.trim());
       try {
-        const imageData = await generateImageWithStableDiffusion(imagePrompt.trim());
+        const imageData = await generateImageWithSdkit(imagePrompt.trim());
         return {
           text: text.trim(),
           image: imageData
@@ -151,7 +151,7 @@ export const generateChatResponse = async (
         console.log("User asked for image but LLM didn't generate an IMAGE_REQUEST tag. Generating image directly.");
         // Create a more descriptive prompt for image generation - don't filter NSFW
         const defaultImagePrompt = "attractive young adult, dating profile photo, professional photography, natural lighting, smiling";
-        const imageData = await generateImageWithStableDiffusion(defaultImagePrompt);
+        const imageData = await generateImageWithSdkit(defaultImagePrompt);
         return {
           text: aiResponse,
           image: imageData
@@ -165,15 +165,15 @@ export const generateChatResponse = async (
     return { text: aiResponse };
   } catch (error) {
     console.error('Error generating chat response:', error);
-    // Check if Stable Diffusion is available for a fallback
+    // Check if SDKit is available for a fallback
     try {
       // For image requests, try to handle with just SD even if LLM fails
       const isImageRequest = /what.*look.*like|show.*body|show.*picture|send.*photo|send.*pic|selfie/i.test(message.toLowerCase());
       if (isImageRequest) {
-        const sdStatus = await checkStableDiffusionStatus();
+        const sdStatus = await checkSdkitStatus();
         if (sdStatus.isRunning) {
           const defaultImagePrompt = "attractive young adult, dating profile photo, professional photography";
-          const imageData = await generateImageWithStableDiffusion(defaultImagePrompt);
+          const imageData = await generateImageWithSdkit(defaultImagePrompt);
           return { 
             text: "Here's a picture of me! What do you think? 😊",
             image: imageData 
@@ -197,190 +197,40 @@ export const generateChatResponse = async (
   }
 };
 
-/**
- * Check if Stable Diffusion WebUI is available
- */
-export const checkStableDiffusionStatus = async () => {
+// Fallback image generation using placeholders
+export const getFallbackImage = async (): Promise<string> => {
   try {
-    console.log("Checking Stable Diffusion WebUI status...");
+    console.log("Using placeholder image fallback");
+    // Use placeholder images when actual generation fails
+    const placeholderImages = [
+      "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg",
+      "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg",
+      "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg",
+      "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg",
+      "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg"
+    ];
     
-    // Attempt to connect to the Stable Diffusion WebUI API
-    const response = await fetch(`${SD_WEBUI_URL}/sd-models`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-      // Shorter timeout for checking status
-      signal: AbortSignal.timeout(5000),
-    });
-    
-    // If not successful, SD is not running
-    if (!response.ok) {
-      console.log("Stable Diffusion WebUI not responding");
-      return {
-        isRunning: false,
-        availableModels: []
-      };
-    }
-    
-    // Parse the models and return them
-    const modelsData = await response.json();
-    console.log("SD WebUI models:", modelsData);
-    
-    // Extract model titles/names
-    const models = modelsData.map((model: any) => model.title || model.model_name);
-    
-    console.log("Available SD models:", models);
-    return {
-      isRunning: true,
-      availableModels: models
-    };
-  } catch (error) {
-    console.error("Error checking Stable Diffusion WebUI status:", error);
-    return {
-      isRunning: false,
-      availableModels: []
-    };
-  }
-};
-
-/**
- * Generate image using Stable Diffusion WebUI's txt2img API
- */
-export const generateImageWithStableDiffusion = async (
-  prompt: string,
-  modelName?: string,
-  allowNsfw = false
-): Promise<string> => {
-  try {
-    console.log(`Generating image with prompt: ${prompt}`);
-    
-    // Create the API payload for Stability Matrix (A1111 WebUI)
-    const payload = {
-      prompt: prompt,
-      negative_prompt: allowNsfw ? "" : "nsfw, nudity, nude, naked, explicit content, pornography, sexual",
-      styles: [""],
-      seed: -1,
-      subseed: -1,
-      subseed_strength: 0,
-      seed_resize_from_h: -1,
-      seed_resize_from_w: -1,
-      sampler_name: "",
-      scheduler: "",
-      batch_size: 1,
-      n_iter: 1,
-      steps: 50,
-      cfg_scale: 7,
-      width: 512,
-      height: 768,
-      restore_faces: true,
-      tiling: false,
-      do_not_save_samples: false,
-      do_not_save_grid: false,
-      eta: 0,
-      denoising_strength: 0,
-      s_min_uncond: 0,
-      s_churn: 0,
-      s_tmax: 0,
-      s_tmin: 0,
-      s_noise: 0,
-      override_settings: {},
-      override_settings_restore_afterwards: true,
-      refiner_checkpoint: "",
-      refiner_switch_at: 0,
-      disable_extra_networks: false,
-      comments: {},
-      enable_hr: false,
-      firstphase_width: 0,
-      firstphase_height: 0,
-      hr_scale: 2,
-      hr_upscaler: "None",
-      hr_second_pass_steps: 0,
-      hr_resize_x: 0,
-      hr_resize_y: 0,
-      sampler_index: "Euler",
-      script_name: "",
-      script_args: [],
-      send_images: true,
-      save_images: false,
-      alwayson_scripts: {}
-    };
-    
-    // If model is specified, override settings
-    if (modelName && modelName.trim() !== "") {
-      payload.override_settings = {
-        ...payload.override_settings,
-        sd_model_checkpoint: modelName
-      };
-    }
-    
-    console.log("Sending request to Stable Diffusion API:", JSON.stringify(payload).slice(0, 200) + "...");
-    
-    // Send the request to Stable Diffusion
-    const response = await fetch(`${SD_WEBUI_URL}/txt2img`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(60000), // 60 second timeout - image generation can take time
-    });
+    const randomPlaceholder = placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
+    const response = await fetch(randomPlaceholder);
     
     if (!response.ok) {
-      console.error(`SD API error status: ${response.status}`);
-      const errorText = await response.text();
-      console.error(`SD API error: ${errorText}`);
-      throw new Error(`Stable Diffusion API returned ${response.status}`);
+      throw new Error('Failed to fetch placeholder image');
     }
     
-    const data = await response.json();
-    console.log("SD API response received, contains images:", !!data.images);
+    const blob = await response.blob();
+    const reader = new FileReader();
     
-    // Convert the base64 image to a data URL for display
-    if (data.images && data.images.length > 0) {
-      const imageBase64 = data.images[0];
-      return `data:image/png;base64,${imageBase64}`;
-    }
-    
-    throw new Error("No image was generated");
-  } catch (error) {
-    console.error("Error generating image with Stable Diffusion:", error);
-    
-    // Fallback to a placeholder image if SD WebUI fails
-    try {
-      console.log("Using placeholder image fallback");
-      // Use placeholder images when Unsplash fails
-      const placeholderImages = [
-        "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg",
-        "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg",
-        "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg",
-        "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg",
-        "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg"
-      ];
-      
-      const randomPlaceholder = placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
-      const response = await fetch(randomPlaceholder);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch placeholder image');
-      }
-      
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      return new Promise((resolve, reject) => {
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-          resolve(base64data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (fallbackError) {
-      console.error('All image fallbacks failed:', fallbackError);
-      // Return a base64 encoded empty transparent image as last resort
-      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-    }
+    return new Promise((resolve, reject) => {
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        resolve(base64data);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (fallbackError) {
+    console.error('All image fallbacks failed:', fallbackError);
+    // Return a base64 encoded empty transparent image as last resort
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
   }
 };
-
