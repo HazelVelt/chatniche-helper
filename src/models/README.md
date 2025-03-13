@@ -1,24 +1,36 @@
 
 # AI Models Directory
 
-This directory is used for storing AI models for SDKit integration.
+This directory is used for storing AI models for SDKit integration in the desktop application.
 
 ## Structure
 
 - `sd15/` - For Stable Diffusion 1.5 models
 - `sdxl/` - For Stable Diffusion XL models
 
-## Installing Models
+## Installing Models for Desktop App
 
-To use SDKit with this application:
+To use SDKit with this desktop application:
 
-1. Install SDKit using: `pip install sdkit`
-2. Download SD1.5 and SDXL models from official sources
-3. Place them in the appropriate folders within this directory
+1. **Install Python** (3.8 or later) if not already installed
+2. **Install SDKit** using: `pip install sdkit`
+3. Download SD1.5 and SDXL models from official sources:
+   - [Civitai](https://civitai.com/) - Community models
+   - [Hugging Face](https://huggingface.co/) - Official models
+4. Place downloaded model files (`.safetensors` or `.ckpt`) in the appropriate folders:
+   - SD1.5 models in `src/models/sd15/`
+   - SDXL models in `src/models/sdxl/`
 
-### Using SDKit in Python
+### Recommended Models
 
-SDKit is a Python library that runs directly on your system. Here's an example of how to use it:
+For the best experience, we recommend the following models:
+
+- **SD1.5**: [Realistic Vision v6.0](https://civitai.com/models/4201/realistic-vision-v60) or [runwayml/stable-diffusion-v1-5](https://huggingface.co/runwayml/stable-diffusion-v1-5)
+- **SDXL**: [SDXL 1.0 Base](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) or [Juggernaut XL](https://civitai.com/models/133005/juggernaut-xl)
+
+### Example SDKit Python Code (For Reference)
+
+The application will automatically use SDKit to generate images using code similar to this:
 
 ```python
 import sdkit
@@ -29,7 +41,7 @@ from sdkit.utils import log, save_images
 context = sdkit.Context()
 
 # Set the path to the model file on disk (.ckpt or .safetensors file)
-context.model_paths["stable-diffusion"] = "./models/sd15/model.safetensors"  # Adjust path as needed
+context.model_paths["stable-diffusion"] = "./models/sd15/model.safetensors"  # Path adjusted by app
 load_model(context, "stable-diffusion")
 
 # Generate the image
@@ -73,9 +85,5 @@ generate_images(
     hypernetwork_strength: float = 0,
 )
 ```
-
-Recommended models:
-- SD1.5: runwayml/stable-diffusion-v1-5
-- SDXL: stabilityai/stable-diffusion-xl-base-1.0
 
 For more information on SDKit, see https://github.com/easydiffusion/sdkit
